@@ -24,6 +24,8 @@ jobs:
           name: BotHouse-windows
           path: |
             dist/*.exe
+            dist/*.blockmap
+            dist/latest.yml
           if-no-files-found: error
       - name: Attach build to a release
         if: github.ref == 'refs/heads/main'
@@ -31,7 +33,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $tag = "v1.0.0"
-          $exists = gh release view $tag 2>$null
-          if ($LASTEXITCODE -ne 0) { gh release create $tag --title "Bot House $tag" --notes "Windows 설치본과 포터블 실행 파일입니다." --latest }
-          gh release upload $tag dist/*.exe --clobber
+          # 태그는 package.json 버전을 따라감 (1.0.2 → v1.0.2). 버전을 올려야 앱이 새 업데이트로 인식함.
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $tag = "v$version"
+          if (-not (Test-Path dist/latest.yml)) { throw "dist/latest.yml 없음: 자동 업데이트가 동작하지 않음" }
+          $files = @(Get-ChildItem dist -File | Where-Object { $_.Extension -in '.exe', '.blockmap' -or $_.Name -eq 'latest.yml' } | ForEach-Object { $_.FullName })
+          Write-Host "Release $tag 업로드 파일:"; $files | ForEach-Object { Write-Host "  $_" }
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag --target $env:GITHUB_SHA --title "Bot House $tag" --notes "Windows 설치본과 포터블 실행 파일입니다." --latest
+            if ($LASTEXITCODE -ne 0) { throw "release 생성 실패" }
+          }
+          gh release upload $tag @files --clobber
+          if ($LASTEXITCODE -ne 0) { throw "release 업로드 실패" }
