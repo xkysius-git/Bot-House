@@ -247,12 +247,18 @@ function send(channel, payload) {
 
 function createWindow() {
   win = new BrowserWindow({
+    // 디지바이스 기기 모양 그대로 바탕화면에 띄우기: 창 테두리 없음 + 투명 배경 + 기기 크기 고정
+    // 이동은 renderer의 -webkit-app-region: drag 영역(기기 상단), 닫기/숨기기는 기기 버튼
     width: 1220,
     height: 800,
-    minWidth: 980,
-    minHeight: 680,
+    useContentSize: true,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    maximizable: false,
+    hasShadow: false,
     show: false,
-    backgroundColor: '#14111f',
+    backgroundColor: '#00000000',
     title: 'Bot House',
     icon: path.join(ROOT, 'assets', 'icon.png'),
     autoHideMenuBar: true,

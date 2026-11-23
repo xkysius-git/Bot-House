@@ -4,6 +4,11 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 const listeners = new Map();
 
+// 창이 테두리 없는 투명 창이라는 표시. renderer CSS에서 html.frameless 일 때 바깥 배경을 투명으로.
+window.addEventListener('DOMContentLoaded', () => {
+  document.documentElement.classList.add('frameless');
+});
+
 function on(channel, handler) {
   const wrapped = (_event, payload) => handler(payload);
   ipcRenderer.on(channel, wrapped);
