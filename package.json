@@ -30,6 +30,7 @@
         "releaseType": "release"
       }
     ],
+    "afterAllArtifactBuild": "tools/after_build.js",
     "directories": {
       "output": "dist",
       "buildResources": "build"

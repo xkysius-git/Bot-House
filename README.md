@@ -88,6 +88,8 @@ UI만 빠르게 확인하려면 `renderer/index.html`을 브라우저로 열면 
 
 `package.json`의 `build.publish`가 `xkysius-git/Bot-House`(GitHub)로 지정되어 있어, `npm run dist -- --publish always`로 빌드하면 셋 다 자동으로 올라갑니다. `--publish never`로 빌드할 때는 `dist/`에 세 파일이 만들어지므로 직접 릴리스에 붙여야 합니다.
 
+빌드가 끝나면 `tools/after_build.js`(`afterAllArtifactBuild` 훅)가 `dist/latest.yml`을 다시 만들고, 그 내용과 exe별 sha512를 빌드 로그에 `-----BOTHOUSE_LATEST_YML_BEGIN-----` 사이에 찍습니다. latest.yml이 릴리스에서 빠졌을 때는 로그에서 그대로 꺼내 올리면 됩니다.
+
 > 주의: `.github/workflows/build.yml`의 릴리스 업로드 단계는 지금 `dist/*.exe`만 올립니다. 자동 업데이트가 계속 동작하려면 업로드 대상을 `dist/*.exe dist/latest.yml dist/*.blockmap`으로 바꾸고, 태그를 `v1.0.0` 고정 대신 `package.json` 버전에서 만들도록 바꾸는 게 좋습니다.
 
 ## 참고
