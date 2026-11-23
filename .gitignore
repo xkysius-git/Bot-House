@@ -5,6 +5,11 @@ tools/preview_*.png
 tools/check_*.png
 tools/usage-sample.json
 .DS_Store
-.github/
 __pycache__/
 *.pyc
+
+# secrets
+.env
+.env.*
+*.pem
+*.key
