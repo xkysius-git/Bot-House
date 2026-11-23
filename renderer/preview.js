@@ -3,6 +3,10 @@
   'use strict';
   if (window.botHouse) return;
 
+  // 브라우저에서는 기기 창(580×450 ↔ 940×450)을 화면 가운데 띄운다
+  document.documentElement.classList.add('preview');
+  document.documentElement.dataset.win = 'compact';
+
   const BOTS = [
     { id: 'oiji', name: '오이지', role: '피클 · 메인 비서', handle: '@xky_oiji_bot', color: '#3FBF6A', seat: { x: 268, y: 178 }, home: { x: 92, y: 240 }, tagline: '일정 · 루틴' },
     { id: 'takuan', name: '단무지', role: '뮤즈 · 석박지 관리', handle: '@xky_takuan_bot', color: '#F2E3CB', seat: { x: 336, y: 178 }, home: { x: 148, y: 252 }, tagline: '더블체크 · IA' },
@@ -68,6 +72,11 @@
     checkUpdate: async () => update,
     installUpdate: async () => ({ ok: false, message: '미리보기에서는 적용되지 않아요' }),
     onUpdate: (f) => { listeners.update.push(f); return () => {}; },
+    // B모드 "치킹!" 변신: 미리보기 창 컨테이너 폭을 580 ↔ 940px로 바꾼다
+    setWindowMode: async (mode) => {
+      document.documentElement.dataset.win = mode === 'wide' ? 'wide' : 'compact';
+      return mode;
+    },
     hideWindow: async () => {},
     quit: async () => {},
     openExternal: async () => {},

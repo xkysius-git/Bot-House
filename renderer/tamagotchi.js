@@ -311,6 +311,7 @@
     state.lastHud = 0;
     renderHud();
     resize();
+    document.dispatchEvent(new CustomEvent('tama-mode', { detail: { mode: state.mode } }));
   }
 
   /* ------------------------------------------------------- DOM 구성 */
@@ -455,11 +456,15 @@
     return Math.round(state.view.lh - clamp(state.view.lh * 0.19, 20, 34));
   }
 
+  function groundY() {
+    return Math.round(state.view.lh - clamp(state.view.lh * 0.2, 20, 38));
+  }
+
   function spriteSize() {
     const lh = state.view.lh;
     // 액정에 비해 너무 크지 않게 (장현님 피드백: 1.0.3은 너무 큼)
-    if (lh > 210) return 64;
-    if (lh > 92) return 48;
+    if (lh > 210) return 80;
+    if (lh > 92) return 52;
     return 32;
   }
 
@@ -1064,6 +1069,14 @@
   }
 
   function anchorOf(id) {
+    if (state.mode === 'all' && state.cellEls && state.cellEls[id]) {
+      const r = state.cellEls[id].cell.getBoundingClientRect();
+      if (r.width) return { x: r.left + r.width / 2, y: r.top + 30 };
+    }
+    const scr = state.screen && state.screen.getBoundingClientRect();
+    if (state.mode === 'focus' && scr && scr.width) {
+      return { x: scr.left + scr.width / 2, y: scr.top + scr.height * 0.42 };
+    }
     const slot = state.slotEls[id];
     if (!slot) return null;
     const r = slot.btn.getBoundingClientRect();

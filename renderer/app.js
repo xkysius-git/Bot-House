@@ -240,6 +240,8 @@
     if (!node) return;
     app.sheet = name;
     node.hidden = false;
+    const body = node.querySelector('.sheet-body');
+    if (body) body.scrollTop = 0;
     if (name === 'log') renderLogBody();
     if (name === 'care') {
       const id = window.Tama ? window.Tama.focusId() : 'oiji';
@@ -569,6 +571,27 @@
     window.Tama.setMode(next);
   }
 
+  /* -------------------------------------------------- 창 모드 ("치킹!" 변신) */
+  let morphTimer = null;
+  const WIN_MS = 320;
+
+  function applyWindowMode(mode, animate = false) {
+    const name = mode === 'all' ? 'wide' : 'compact';
+    if (document.documentElement.dataset.win === name && !animate) return;
+    document.documentElement.dataset.win = name;
+    if (bridge.setWindowMode) {
+      try { bridge.setWindowMode(name, { duration: WIN_MS }); } catch (_) { /* 미리보기에서는 창이 없어요 */ }
+    }
+    if (!animate) return;
+    if (window.Sfx) window.Sfx.play(name === 'wide' ? 'expand' : 'collapse');
+    const device = el('device');
+    device.classList.remove('morph');
+    void device.offsetWidth; // 애니메이션 재시작
+    device.classList.add('morph');
+    clearTimeout(morphTimer);
+    morphTimer = setTimeout(() => device.classList.remove('morph'), 780);
+  }
+
   function tickClock() {
     const node = el('lcdClock');
     if (!node) return;
@@ -712,6 +735,10 @@
       }
     });
 
+    document.addEventListener('tama-mode', (e) => {
+      applyWindowMode((e.detail || {}).mode, true);
+    });
+
     document.addEventListener('tama-focus', (e) => {
       if (app.sheet !== 'care') return;
       const id = (e.detail || {}).id;
@@ -744,6 +771,7 @@
     app.update = init.update || {};
 
     applyTheme(app.settings.theme || 'night');
+    if (window.Sfx) window.Sfx.setEnabled(app.settings.soundOn !== false);
     tickClock();
     setInterval(tickClock, 15000);
 
@@ -764,6 +792,7 @@
     });
     bind();
     switchView(app.view);
+    applyWindowMode('focus', false);
     renderAll();
     setInterval(renderClaudeCard, 5000);
     setInterval(paintAvatars, 140);
