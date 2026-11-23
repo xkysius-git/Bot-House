@@ -1,0 +1,7 @@
+node_modules/
+dist/
+tools/shots/
+tools/preview_*.png
+tools/check_*.png
+tools/usage-sample.json
+.DS_Store

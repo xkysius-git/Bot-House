@@ -1,0 +1,56 @@
+{
+  "name": "bot-house",
+  "productName": "Bot House",
+  "version": "1.0.0",
+  "description": "Bot House — 봇들이 사는 집, Claude 채널 자동 연결 런처",
+  "main": "electron/main.js",
+  "author": {
+    "name": "김장현"
+  },
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --win nsis portable"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.kimjanghyeon.bothouse",
+    "productName": "Bot House",
+    "copyright": "Copyright © 2026 김장현",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "renderer/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "BotHouse-${version}-${arch}-setup.${ext}"
+    },
+    "portable": {
+      "artifactName": "BotHouse-${version}-portable.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Bot House",
+      "runAfterFinish": true
+    }
+  }
+}
