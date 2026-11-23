@@ -245,28 +245,66 @@ function send(channel, payload) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
 }
 
-// 기기 크기: 화면은 1220x800 기준으로 그려져 있고, 창 크기와 확대율을 같이 줄여서 통째로 축소한다.
-const DEVICE_BASE = { w: 1220, h: 800 };
+/* --------------------------------------------------------------- 기기 창 (작은 기기 ↔ 펼친 기기)
+ * renderer가 기기 크기(논리 px)를 device.configure로 알려주고, device.setMode로 접기/펼치기.
+ * 창은 가운데를 기준으로 좌우로 늘어나고 줄어든다. 배율(deviceScale)은 창 크기와 화면 확대율에 같이 곱한다.
+ * configure 전에는 예전 큰 화면(1220x800) 크기를 쓴다. 자세한 건 docs/DEVICE.md */
+const device = {
+  sizes: { compact: { w: 1220, h: 800 }, expanded: { w: 1220, h: 800 } },
+  mode: 'compact',
+  anim: null
+};
 const DEVICE_SCALES = [
-  { label: '아주 작게', value: 0.5 },
-  { label: '작게', value: 0.6 },
-  { label: '보통', value: 0.7 },
-  { label: '크게', value: 0.85 },
-  { label: '원래 크기', value: 1 }
+  { label: '작게', value: 0.8 },
+  { label: '보통', value: 1 },
+  { label: '크게', value: 1.25 },
+  { label: '아주 크게', value: 1.5 }
 ];
 
 function deviceScale() {
   const v = Number(store.get('deviceScale'));
-  return v >= 0.4 && v <= 1.5 ? v : 0.7;
+  return v >= 0.4 && v <= 2 ? v : 1;
+}
+
+function deviceSize(mode = device.mode) {
+  const s = deviceScale();
+  const base = device.sizes[mode] || device.sizes.compact;
+  return { w: Math.round(base.w * s), h: Math.round(base.h * s) };
+}
+
+function setWindowSize(w, h, centerX, centerY) {
+  win.setResizable(true);
+  win.setBounds({ x: Math.round(centerX - w / 2), y: Math.round(centerY - h / 2), width: w, height: h });
+  win.setResizable(false);
+}
+
+// 현재 중심을 유지한 채 창 크기를 부드럽게 바꾼다 (ease-out)
+function animateWindowTo(w, h, duration) {
+  if (!win || win.isDestroyed()) return Promise.resolve();
+  if (device.anim) { clearInterval(device.anim.timer); device.anim.resolve(); }
+  const b = win.getBounds();
+  const cx = b.x + b.width / 2;
+  const cy = b.y + b.height / 2;
+  if (!duration || duration <= 0) { setWindowSize(w, h, cx, cy); return Promise.resolve(); }
+  const from = { w: b.width, h: b.height };
+  const start = Date.now();
+  return new Promise((resolve) => {
+    const timer = setInterval(() => {
+      if (!win || win.isDestroyed()) { clearInterval(timer); device.anim = null; return resolve(); }
+      const t = Math.min(1, (Date.now() - start) / duration);
+      const k = 1 - Math.pow(1 - t, 3);
+      setWindowSize(Math.round(from.w + (w - from.w) * k), Math.round(from.h + (h - from.h) * k), cx, cy);
+      if (t >= 1) { clearInterval(timer); device.anim = null; resolve(); }
+    }, 16);
+    device.anim = { timer, resolve };
+  });
 }
 
 function applyDeviceScale() {
   if (!win || win.isDestroyed()) return;
-  const s = deviceScale();
-  win.setResizable(true);
-  win.setContentSize(Math.round(DEVICE_BASE.w * s), Math.round(DEVICE_BASE.h * s));
-  win.setResizable(false);
-  win.webContents.setZoomFactor(s);
+  const { w, h } = deviceSize();
+  animateWindowTo(w, h, 0);
+  win.webContents.setZoomFactor(deviceScale());
 }
 
 function setDeviceScale(value) {
@@ -275,13 +313,36 @@ function setDeviceScale(value) {
   buildTrayMenu();
 }
 
+function validSize(o) {
+  const w = Number(o && o.w);
+  const h = Number(o && o.h);
+  return w >= 160 && w <= 2400 && h >= 160 && h <= 1600 ? { w: Math.round(w), h: Math.round(h) } : null;
+}
+
+function configureDevice(payload) {
+  const compact = validSize(payload && payload.compact);
+  const expanded = validSize(payload && payload.expanded) || compact;
+  if (!compact) return { ok: false, error: 'compact 크기가 필요해요 ({ w, h })' };
+  device.sizes = { compact, expanded };
+  applyDeviceScale();
+  return { ok: true, mode: device.mode, scale: deviceScale() };
+}
+
+async function setDeviceMode(mode, opts = {}) {
+  device.mode = mode === 'expanded' ? 'expanded' : 'compact';
+  const { w, h } = deviceSize();
+  const duration = Math.max(0, Math.min(1500, Number(opts.duration ?? 320)));
+  await animateWindowTo(w, h, duration);
+  return { ok: true, mode: device.mode };
+}
+
 function createWindow() {
-  const s = deviceScale();
+  const first = deviceSize('compact');
   win = new BrowserWindow({
-    // 디지바이스 기기 모양 그대로 바탕화면에 띄우기: 창 테두리 없음 + 투명 배경 + 기기 크기 고정
-    // 이동은 renderer의 -webkit-app-region: drag 영역(기기 상단), 닫기/숨기기는 기기 버튼
-    width: Math.round(DEVICE_BASE.w * s),
-    height: Math.round(DEVICE_BASE.h * s),
+    // 기기 모양 그대로 바탕화면에 띄우기: 창 테두리 없음 + 투명 배경 + 크기는 renderer가 정함
+    // 이동은 renderer의 -webkit-app-region: drag 영역, 닫기/숨기기는 기기 버튼
+    width: first.w,
+    height: first.h,
     useContentSize: true,
     frame: false,
     transparent: true,
@@ -523,6 +584,11 @@ function registerIpc() {
   });
 
   // 앱 안 채팅 (텔레그램 그룹)
+  // 기기 창 접기/펼치기
+  ipcMain.handle('device:configure', (_e, payload) => configureDevice(payload));
+  ipcMain.handle('device:setMode', (_e, mode, opts) => setDeviceMode(mode, opts || {}));
+  ipcMain.handle('device:info', () => ({ mode: device.mode, sizes: device.sizes, scale: deviceScale() }));
+
   ipcMain.handle('chat:status', () => chat.snapshot());
   ipcMain.handle('chat:connect', () => chat.connect());
   ipcMain.handle('chat:sendCode', (_e, phone) => chat.sendCode(phone));

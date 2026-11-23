@@ -43,6 +43,12 @@ contextBridge.exposeInMainWorld('botHouse', {
   onSettings: (handler) => on('settings', handler),
   onUsage: (handler) => on('usage', handler),
   onUpdate: (handler) => on('update', handler),
+  // 기기 창 접기/펼치기 — docs/DEVICE.md 참고
+  device: {
+    configure: (sizes) => ipcRenderer.invoke('device:configure', sizes),
+    setMode: (mode, opts) => ipcRenderer.invoke('device:setMode', mode, opts),
+    info: () => ipcRenderer.invoke('device:info')
+  },
   // 앱 안 채팅 (텔레그램 그룹) — docs/CHAT.md 참고
   chat: {
     status: () => ipcRenderer.invoke('chat:status'),
