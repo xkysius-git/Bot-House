@@ -248,9 +248,9 @@ function send(channel, payload) {
 /* --------------------------------------------------------------- 기기 창 (작은 기기 ↔ 펼친 기기)
  * renderer가 기기 크기(논리 px)를 device.configure로 알려주고, device.setMode로 접기/펼치기.
  * 창은 가운데를 기준으로 좌우로 늘어나고 줄어든다. 배율(deviceScale)은 창 크기와 화면 확대율에 같이 곱한다.
- * configure 전에는 예전 큰 화면(1220x800) 크기를 쓴다. 자세한 건 docs/DEVICE.md */
+ * 기본 크기는 오이지 디자인 기준 (한 마리 580x450, 전체 보기 940x450). 자세한 건 docs/DEVICE.md */
 const device = {
-  sizes: { compact: { w: 1220, h: 800 }, expanded: { w: 1220, h: 800 } },
+  sizes: { compact: { w: 580, h: 450 }, expanded: { w: 940, h: 450 } },
   mode: 'compact',
   anim: null
 };

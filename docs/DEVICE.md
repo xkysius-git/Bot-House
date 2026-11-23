@@ -39,7 +39,7 @@ botHouse.device.info(); // { mode, sizes, scale }
 
 - 창은 테두리 없는 투명 창. 기기 바깥은 투명하게 (`html.frameless`).
 - 배율: 트레이 → 기기 크기 (작게 0.8 / 보통 1 / 크게 1.25 / 아주 크게 1.5). 창 크기와 화면 확대율에 같이 곱해지므로 renderer는 배율 신경 쓸 필요 없음.
-- `configure`를 부르기 전에는 예전 큰 화면(1220x800) 크기로 뜬다 → 새 화면이 준비될 때까지 기존 앱이 그대로 동작.
+- 기본 크기: 한 마리 580x450, 전체 보기 940x450 (오이지 디자인). 바꾸려면 `configure`. 간단 버전 `botHouse.setWindowMode("compact" | "wide")`도 있음.
 
 ## 효과음
 
