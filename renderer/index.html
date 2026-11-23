@@ -7,180 +7,260 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="theme-night">
-  <div class="app">
-    <header class="topbar">
-      <div class="brand">
-        <img class="brand-mark" src="../assets/icon.png" alt="">
-        <div class="brand-text">
-          <h1>BOT HOUSE</h1>
-          <p>봇들이 사는 집</p>
+  <div class="desk">
+    <div class="device" id="device">
+      <!-- 스트랩 고리 -->
+      <div class="strap" aria-hidden="true"><span class="strap-ring"></span><span class="strap-pin"></span></div>
+
+      <div class="shell" id="shell">
+      <div class="bumper" aria-hidden="true"></div>
+      <div class="shell-seam" aria-hidden="true"></div>
+
+      <!-- 상단 크라운: 브랜드 + 창 컨트롤 -->
+      <div class="crown" id="crown">
+        <div class="crown-brand">
+          <span class="crown-led" id="shellLed" aria-hidden="true"></span>
+          <span class="crown-name">BOT HOUSE</span>
+          <span class="crown-model">CARE UNIT · 01</span>
+        </div>
+        <div class="crown-actions">
+          <button class="win-btn" id="winMin" type="button" title="트레이로 숨기기" aria-label="트레이로 숨기기">–</button>
+          <button class="win-btn close" id="winClose" type="button" title="앱 종료" aria-label="앱 종료">×</button>
         </div>
       </div>
-      <div class="viewswitch" id="viewSwitch">
-        <button type="button" class="on" data-view="tamagotchi">다마고치</button>
-        <button type="button" data-view="house">하우스</button>
-        <button type="button" data-view="usage">사용량</button>
-      </div>
-      <div class="topbar-actions">
-        <button class="ghost token-chip" id="tokenChip" type="button" title="오늘 쓴 토큰 · 사용량 보기">
-          <span class="token-dot"></span>
-          <span id="tokenToday">–</span>
-        </button>
-        <button class="ghost update-chip" id="updateBtn" type="button" hidden>
-          <span class="update-dot"></span>
-          <span id="updateLabel">새 버전</span>
-        </button>
-        <button class="ghost" id="themeBtn" type="button" title="낮/밤 전환">
-          <span class="dot-swatch" id="themeSwatch"></span>
-          <span id="themeLabel">밤</span>
-        </button>
-        <button class="ghost" id="logBtn" type="button">로그</button>
-        <button class="ghost" id="settingsBtn" type="button">설정</button>
-      </div>
-    </header>
 
-    <main class="layout">
-      <section class="stage">
-        <div class="tama" id="tamaView">
-          <div class="tama-device">
-            <div class="tama-top">
-              <div class="tama-brand">
-                <span class="tama-led"></span>
-                <span class="tama-brand-name">BOT HOUSE</span>
-                <span class="tama-brand-sub">CARE UNIT</span>
+      <div class="device-body">
+        <!-- 왼쪽 그립: 낮/밤 슬라이드 + 스피커 -->
+        <div class="rail grip-pod" aria-hidden="false">
+          <span class="pod-ribs" aria-hidden="true"><i></i><i></i><i></i></span>
+          <button class="rail-switch" id="themeBtn" type="button" title="낮/밤 전환">
+            <span class="rail-track"><span class="rail-knob" id="themeSwatch"></span></span>
+            <span class="rail-label" id="themeLabel">밤</span>
+          </button>
+          <div class="speaker" aria-hidden="true">
+            <i></i><i></i><i></i><i></i><i></i><i></i>
+          </div>
+        </div>
+
+        <!-- 액정 -->
+        <div class="lcd-bezel">
+          <div class="lcd" id="lcdScreen">
+            <div class="lcd-top">
+              <div class="lcd-tabs" id="viewSwitch">
+                <button type="button" class="on" data-view="tamagotchi">홈</button>
+                <button type="button" data-view="house">작업실</button>
+                <button type="button" data-view="usage">사용량</button>
               </div>
-              <div class="tama-modes">
+              <div class="tama-modes" id="tamaModes">
                 <button type="button" class="tama-mode on" data-mode="focus">한 마리</button>
                 <button type="button" class="tama-mode" data-mode="all">전체 보기</button>
               </div>
-            </div>
-
-            <div class="tama-screen" id="tamaScreen">
-              <div class="tama-focus" id="tamaFocus">
-                <canvas id="tamaStage" width="192" height="108"></canvas>
-                <div class="tama-hud">
-                  <div class="tama-who">
-                    <div class="tama-who-line">
-                      <span class="tama-name" id="tamaName">오이지</span>
-                      <span class="tama-role" id="tamaRole"></span>
-                    </div>
-                    <span class="tama-meta" id="tamaMeta"></span>
-                  </div>
-                  <span class="tama-state idle" id="tamaState">쉬는 중</span>
-                </div>
-                <div class="tama-bubble" id="tamaBubble" hidden></div>
-                <div class="tama-meters" id="tamaMeters"></div>
+              <div class="lcd-status">
+                <button class="lcd-chip token" id="tokenChip" type="button" title="오늘 쓴 토큰 · 사용량 보기">
+                  <span class="token-dot"></span>
+                  <span id="tokenToday">–</span>
+                </button>
+                <button class="lcd-chip update" id="updateBtn" type="button" hidden>
+                  <span class="update-dot"></span>
+                  <span id="updateLabel">새 버전</span>
+                </button>
+                <span class="lcd-clock" id="lcdClock">--:--</span>
               </div>
-              <div class="tama-quad" id="tamaQuad" hidden></div>
-              <div class="tama-glass" aria-hidden="true"></div>
             </div>
 
-            <div class="tama-slots" id="tamaSlots"></div>
+            <div class="lcd-body">
+              <!-- 홈: 다마고치 케어 -->
+              <section class="page page-home" id="tamaView">
+                <div class="tama" id="tamaStageWrap">
+                  <div class="tama-screen" id="tamaScreen">
+                    <div class="tama-focus" id="tamaFocus">
+                      <canvas id="tamaStage" width="192" height="108"></canvas>
+                      <div class="tama-hud">
+                        <div class="tama-who">
+                          <div class="tama-who-line">
+                            <span class="tama-name" id="tamaName">오이지</span>
+                            <span class="tama-role" id="tamaRole"></span>
+                          </div>
+                          <span class="tama-meta" id="tamaMeta"></span>
+                        </div>
+                        <span class="tama-state idle" id="tamaState">쉬는 중</span>
+                      </div>
+                      <div class="tama-bubble" id="tamaBubble" hidden></div>
+                      <div class="tama-meters" id="tamaMeters"></div>
+                    </div>
+                    <div class="tama-quad" id="tamaQuad" hidden></div>
+                    <div class="tama-glass" aria-hidden="true"></div>
+                  </div>
+                </div>
+              </section>
 
-            <div class="tama-controls" id="tamaControls">
-              <button type="button" class="tama-btn" data-act="pet">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 11V5.5a1.5 1.5 0 0 1 3 0V10m0-4.5a1.5 1.5 0 0 1 3 0V10m0-3.5a1.5 1.5 0 0 1 3 0V12m0-2.5a1.4 1.4 0 0 1 3 0v4.3c0 3.3-2.3 5.7-5.6 5.7h-1.6c-2 0-3.2-.8-4.3-2.3l-3-4.4a1.5 1.5 0 0 1 2.4-1.8L8 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                <span class="tama-btn-label">쓰다듬기</span>
-              </button>
-              <button type="button" class="tama-btn" data-act="snack">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10h16l-1.4 7.2a2 2 0 0 1-2 1.6H7.4a2 2 0 0 1-2-1.6L4 10Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M6 10c0-2.2 1.6-3.4 3.4-3.4 1 0 1.7.5 2.1 1.2.5-.7 1.2-1.2 2.2-1.2C15.5 6.6 17 7.8 17 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M9 13.4h6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-                <span class="tama-btn-label">간식</span>
-              </button>
-              <button type="button" class="tama-btn" data-act="cheer">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l1.9 4.9 5.1.4-3.9 3.3 1.2 5.1L12 14.4l-4.3 2.8 1.2-5.1L5 8.8l5.1-.4L12 3.5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M18.5 17.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8Z" fill="currentColor"/></svg>
-                <span class="tama-btn-label">응원하기</span>
-              </button>
-              <button type="button" class="tama-btn" data-act="sleep">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8.2 8.2 0 1 0 10.5 10.5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
-                <span class="tama-btn-label">재우기</span>
-              </button>
+              <!-- 작업실: 픽셀 하우스 -->
+              <section class="page page-house" id="sceneHolder" hidden>
+                <div class="scene" id="scene">
+                  <canvas id="house" width="480" height="270"></canvas>
+                  <div class="zone-labels" aria-hidden="true">
+                    <span class="zone-label">휴게실</span>
+                    <span class="zone-label">작업실</span>
+                  </div>
+                  <div class="bubbles" id="bubbles"></div>
+                  <div class="scene-hint" id="sceneHint">캐릭터를 누르면 지금 뭐 하는지 볼 수 있어요</div>
+                  <div class="statusbar" id="statusbar"></div>
+                </div>
+              </section>
+
+              <!-- 사용량 -->
+              <section class="page page-usage" id="usageView" hidden>
+                <div class="usage">
+                  <div class="usage-summary">
+                    <div class="metric"><span class="label">오늘 토큰</span><strong id="usageToday">-</strong></div>
+                    <div class="metric"><span class="label">이번 주</span><strong id="usageWeek">-</strong></div>
+                    <div class="metric"><span class="label">기록 갱신</span><strong id="usageUpdated" class="small">-</strong></div>
+                    <button class="ghost" id="usageRefresh" type="button">새로고침</button>
+                  </div>
+                  <div class="usage-grid" id="usageGrid"></div>
+                  <p class="usage-note" id="usageNote"></p>
+                </div>
+              </section>
+
+              <!-- 액정 시트: 메뉴 -->
+              <section class="sheet menu-sheet" id="menuSheet" hidden>
+                <header class="sheet-head">
+                  <h2>기기 메뉴</h2>
+                  <button class="sheet-close" id="menuClose" type="button" aria-label="닫기">×</button>
+                </header>
+                <div class="sheet-body">
+                  <section class="card claude-card">
+                    <div class="claude-head">
+                      <div class="avatar-wrap"><span class="avatar" data-bot="claude"></span></div>
+                      <div class="claude-meta">
+                        <div class="claude-title">클로드 채널</div>
+                        <div class="claude-sub" id="claudeSub">확인 중…</div>
+                      </div>
+                      <span class="chip" id="claudeChip">확인 중</span>
+                    </div>
+                    <dl class="kv">
+                      <div><dt>작업 폴더</dt><dd id="claudeCwd">-</dd></div>
+                      <div><dt>연결 시간</dt><dd id="claudeUptime">-</dd></div>
+                    </dl>
+                    <div class="claude-actions">
+                      <button class="primary" id="claudeRestart" type="button">재연결</button>
+                      <button class="ghost" id="claudeLog" type="button">로그 보기</button>
+                    </div>
+                  </section>
+
+                  <section class="card">
+                    <div class="card-head">
+                      <h2>봇 상태</h2>
+                      <span class="hint">누르면 자세히</span>
+                    </div>
+                    <div class="bot-list" id="botList"></div>
+                  </section>
+
+                  <section class="card menu-actions">
+                    <button class="menu-row" id="logBtn" type="button">
+                      <span class="menu-ico">▤</span><span>클로드 로그</span>
+                    </button>
+                    <button class="menu-row" id="settingsBtn" type="button">
+                      <span class="menu-ico">⚙</span><span>설정</span>
+                    </button>
+                    <button class="menu-row" id="updateRow" type="button">
+                      <span class="menu-ico">↻</span><span>업데이트 확인</span>
+                      <em id="updateRowState">확인 전</em>
+                    </button>
+                  </section>
+
+                  <div class="menu-foot">
+                    <button class="link" id="hideBtn" type="button">트레이로 숨기기</button>
+                    <span class="sep">·</span>
+                    <button class="link" id="quitBtn" type="button">앱 종료</button>
+                  </div>
+                </div>
+              </section>
+
+              <!-- 액정 시트: 돌보기 -->
+              <section class="sheet care-sheet" id="careSheet" hidden>
+                <header class="sheet-head">
+                  <h2 id="careTitle">돌보기</h2>
+                  <button class="sheet-close" id="careClose" type="button" aria-label="닫기">×</button>
+                </header>
+                <div class="care-who">
+                  <span class="avatar big" id="careAvatar"></span>
+                  <div class="care-who-text">
+                    <b id="careName">오이지</b>
+                    <span id="careState">쉬는 중 · 컨디션 74%</span>
+                  </div>
+                </div>
+                <div class="care-grid" id="tamaControls">
+                  <button type="button" class="tama-btn" data-act="pet">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 11V5.5a1.5 1.5 0 0 1 3 0V10m0-4.5a1.5 1.5 0 0 1 3 0V10m0-3.5a1.5 1.5 0 0 1 3 0V12m0-2.5a1.4 1.4 0 0 1 3 0v4.3c0 3.3-2.3 5.7-5.6 5.7h-1.6c-2 0-3.2-.8-4.3-2.3l-3-4.4a1.5 1.5 0 0 1 2.4-1.8L8 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span class="tama-btn-label">쓰다듬기</span>
+                  </button>
+                  <button type="button" class="tama-btn" data-act="snack">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10h16l-1.4 7.2a2 2 0 0 1-2 1.6H7.4a2 2 0 0 1-2-1.6L4 10Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M6 10c0-2.2 1.6-3.4 3.4-3.4 1 0 1.7.5 2.1 1.2.5-.7 1.2-1.2 2.2-1.2C15.5 6.6 17 7.8 17 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M9 13.4h6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                    <span class="tama-btn-label">간식</span>
+                  </button>
+                  <button type="button" class="tama-btn" data-act="cheer">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l1.9 4.9 5.1.4-3.9 3.3 1.2 5.1L12 14.4l-4.3 2.8 1.2-5.1L5 8.8l5.1-.4L12 3.5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M18.5 17.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8Z" fill="currentColor"/></svg>
+                    <span class="tama-btn-label">응원하기</span>
+                  </button>
+                  <button type="button" class="tama-btn" data-act="sleep">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8.2 8.2 0 1 0 10.5 10.5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                    <span class="tama-btn-label">재우기</span>
+                  </button>
+                </div>
+                <p class="care-hint" id="careHint">D-패드 ← → 로 고르고 A 로 실행해요</p>
+              </section>
+
+              <!-- 액정 시트: 클로드 로그 -->
+              <section class="sheet log-sheet" id="logPanel" hidden>
+                <header class="sheet-head">
+                  <div class="sheet-title"><span class="pulse" id="logPulse"></span>Claude 채널 로그</div>
+                  <div class="sheet-actions">
+                    <button class="mini" id="logRestart" type="button">재연결</button>
+                    <button class="mini" id="logClear" type="button">지우기</button>
+                    <button class="mini" id="logClose" type="button">닫기</button>
+                  </div>
+                </header>
+                <pre class="logbody" id="logBody"></pre>
+              </section>
             </div>
 
-            <div class="tama-foot" aria-hidden="true">
-              <span class="tama-holes"><i></i><i></i><i></i><i></i><i></i><i></i></span>
-              <span class="tama-screw"></span>
-            </div>
+            <div class="lcd-glass" aria-hidden="true"></div>
           </div>
         </div>
 
-        <div class="scene-holder" id="sceneHolder" hidden>
-        <div class="scene" id="scene">
-          <canvas id="house" width="480" height="270"></canvas>
-          <div class="zone-labels" aria-hidden="true">
-            <span class="zone-label">휴게실</span>
-            <span class="zone-label">작업실</span>
-          </div>
-          <div class="bubbles" id="bubbles"></div>
-          <div class="scene-hint" id="sceneHint">캐릭터를 누르면 지금 뭐 하는지 볼 수 있어요</div>
+        <!-- 오른쪽 그립: 벤트 + 표시등 -->
+        <div class="pod-r" aria-hidden="true">
+          <span class="pod-led"></span>
+          <span class="pod-ribs"><i></i><i></i><i></i><i></i></span>
         </div>
-        </div>
+      </div>
 
-        <div class="logpanel" id="logPanel" hidden>
-          <div class="logpanel-head">
-            <div class="logpanel-title">
-              <span class="pulse" id="logPulse"></span>
-              Claude 채널 로그
-            </div>
-            <div class="logpanel-actions">
-              <button class="mini" id="logRestart" type="button">재연결</button>
-              <button class="mini" id="logClear" type="button">지우기</button>
-              <button class="mini" id="logClose" type="button">닫기</button>
-            </div>
-          </div>
-          <pre class="logbody" id="logBody"></pre>
+      <!-- 하단: 크레스트 키 + D-패드 + A·B 버튼 -->
+      <div class="device-foot">
+        <div class="crest-row" id="tamaSlots"></div>
+
+        <div class="dpad" id="dpad">
+          <button class="dbtn up" type="button" data-key="UP" aria-label="이전 화면"><i></i></button>
+          <button class="dbtn left" type="button" data-key="LEFT" aria-label="이전 봇"><i></i></button>
+          <span class="dbtn mid emblem" aria-hidden="true">◈</span>
+          <button class="dbtn right" type="button" data-key="RIGHT" aria-label="다음 봇"><i></i></button>
+          <button class="dbtn down" type="button" data-key="DOWN" aria-label="다음 화면"><i></i></button>
         </div>
 
-        <div class="usage" id="usageView" hidden>
-          <div class="usage-summary">
-            <div class="metric"><span class="label">오늘 토큰</span><strong id="usageToday">-</strong></div>
-            <div class="metric"><span class="label">이번 주</span><strong id="usageWeek">-</strong></div>
-            <div class="metric"><span class="label">기록 갱신</span><strong id="usageUpdated" class="small">-</strong></div>
-            <button class="ghost" id="usageRefresh" type="button">새로고침</button>
-          </div>
-          <div class="usage-grid" id="usageGrid"></div>
-          <p class="usage-note" id="usageNote"></p>
+        <div class="ab-pad">
+          <button class="ab-key a" type="button" data-key="A"><b>A</b><span>돌보기</span></button>
+          <button class="ab-key b" type="button" data-key="B"><b>B</b><span>모드</span></button>
+          <button class="ab-key c" type="button" data-key="C"><b>C</b><span>메뉴</span></button>
         </div>
 
-        <div class="statusbar" id="statusbar"></div>
-      </section>
-
-      <aside class="side">
-        <section class="card claude-card">
-          <div class="claude-head">
-            <div class="avatar-wrap">
-              <span class="avatar" data-bot="claude"></span>
-            </div>
-            <div class="claude-meta">
-              <div class="claude-title">클로드 채널</div>
-              <div class="claude-sub" id="claudeSub">확인 중…</div>
-            </div>
-            <span class="chip" id="claudeChip">확인 중</span>
-          </div>
-          <dl class="kv">
-            <div><dt>작업 폴더</dt><dd id="claudeCwd">-</dd></div>
-            <div><dt>연결 시간</dt><dd id="claudeUptime">-</dd></div>
-          </dl>
-          <div class="claude-actions">
-            <button class="primary" id="claudeRestart" type="button">재연결</button>
-            <button class="ghost" id="claudeLog" type="button">로그 보기</button>
-          </div>
-        </section>
-
-        <section class="card">
-          <div class="card-head">
-            <h2>봇 상태</h2>
-            <span class="hint">누르면 자세히</span>
-          </div>
-          <div class="bot-list" id="botList"></div>
-        </section>
-
-        <div class="side-foot">
-          <button class="link" id="hideBtn" type="button">트레이로 숨기기</button>
-          <span class="sep">·</span>
-          <button class="link" id="quitBtn" type="button">앱 종료</button>
+        <div class="foot-detail" aria-hidden="true">
+          <span class="screw"></span>
+          <span class="vent"><i></i><i></i><i></i></span>
         </div>
-      </aside>
-    </main>
+      </div>
+      </div>
+    </div>
   </div>
 
   <div class="popover" id="popover" hidden>

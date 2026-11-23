@@ -296,6 +296,7 @@
     setBubble(null);
     if (state.mode !== 'focus') setMode('focus');
     paintSelection();
+    document.dispatchEvent(new CustomEvent('tama-focus', { detail: { id } }));
     state.lastHud = 0;
     renderHud();
   }
@@ -1070,5 +1071,7 @@
     return { x: r.left + r.width / 2, y: r.top };
   }
 
-  window.Tama = { init, setBots, setTheme, setVisible, anchorOf, focus, act, setMode };
+  function focusId() { return state.focus; }
+
+  window.Tama = { init, setBots, setTheme, setVisible, anchorOf, focus, act, setMode, focusId };
 })();

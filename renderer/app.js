@@ -18,10 +18,14 @@
     popBot: null,
     usage: null,
     update: {},
-    view: 'tamagotchi'
+    view: 'tamagotchi',
+    sheet: null,
+    careIdx: 0
   };
 
   const BOT_IDS = ['oiji', 'takuan', 'sbji', 'claude'];
+  const VIEWS = ['tamagotchi', 'house', 'usage'];
+  const CARE = ['pet', 'snack', 'cheer', 'sleep'];
 
   const stateLabel = {
     working: '작업 중',
@@ -51,11 +55,6 @@
     return `${hr}시간 ${rest}분째`;
   }
 
-  function firstName(id) {
-    const def = app.botDefs.find((b) => b.id === id);
-    return def ? def.name : id;
-  }
-
   function setAvatar(node, id, anim = 'idle') {
     if (!node) return;
     node.dataset.bot = id;
@@ -81,7 +80,7 @@
     });
   }
 
-  /* -------------------------------------------------- 상단/사이드 렌더 */
+  /* -------------------------------------------------- 상태 표시 */
   function renderStatusBar() {
     const bar = el('statusbar');
     bar.innerHTML = '';
@@ -124,7 +123,7 @@
           </span>
           <span class="note">${st.note || def.role || ''}</span>
         </span>
-        <span class="when">${st.state === 'working' ? timeAgo(st.lastActivity) : timeAgo(st.lastActivity)}</span>`;
+        <span class="when">${timeAgo(st.lastActivity)}</span>`;
       if (row.querySelector('.when').textContent === '-') row.querySelector('.when').textContent = '';
       row.addEventListener('click', () => openPopover(id));
       list.appendChild(row);
@@ -146,16 +145,19 @@
     const c = app.claude || {};
     const label = CLAUDE_CHIP[c.status] || ['확인 중', 'stopped'];
     const chip = el('claudeChip');
-    chip.textContent = c.status === 'running' && app.bots.claude && app.bots.claude.state === 'working' ? '작업 중' : label[0];
-    chip.className = 'chip ' + (c.status === 'running' && app.bots.claude && app.bots.claude.state === 'working' ? 'working' : label[1]);
+    const working = c.status === 'running' && app.bots.claude && app.bots.claude.state === 'working';
+    chip.textContent = working ? '작업 중' : label[0];
+    chip.className = 'chip ' + (working ? 'working' : label[1]);
     el('claudeSub').textContent = c.message || (c.status === 'running' ? '채널이 켜져 있어요' : '연결되지 않았어요');
     el('claudeCwd').textContent = c.cwd || '-';
     el('claudeCwd').title = c.cwd || '';
     el('claudeUptime').textContent = c.status === 'running' ? elapsed(c.startedAt) : '-';
 
     const pulse = el('logPulse');
-    pulse.className = 'pulse' + (c.status === 'running'
-      ? (app.bots.claude && app.bots.claude.state === 'working' ? ' work' : ' on') : '');
+    pulse.className = 'pulse' + (c.status === 'running' ? (working ? ' work' : ' on') : '');
+
+    const led = el('shellLed');
+    if (led) led.classList.toggle('off', !(c.status === 'running'));
   }
 
   function renderAll() {
@@ -166,15 +168,15 @@
     if (window.Tama) window.Tama.setBots(app.bots);
   }
 
-  /* 업데이트 알림 -------------------------------------------------- */
+  /* 업데이트 -------------------------------------------------- */
   function updateText(u) {
     const st = u.status || 'idle';
-    if (st === 'dev') return '개발 실행 중에는 업데이트를 확인하지 않아요';
-    if (st === 'checking') return '새 버전을 확인하는 중이에요';
-    if (st === 'available' || st === 'downloading') return u.message || `새 버전을 내려받는 중 ${u.percent || 0}%`;
-    if (st === 'ready') return '새 버전 준비 완료 — 재시작하면 적용돼요';
-    if (st === 'none') return '지금이 최신 버전이에요';
-    if (st === 'error') return u.message || '업데이트를 확인하지 못했어요';
+    if (st === 'dev') return '개발 실행 중에는 확인하지 않아요';
+    if (st === 'checking') return '확인하는 중';
+    if (st === 'available' || st === 'downloading') return u.message || `내려받는 중 ${u.percent || 0}%`;
+    if (st === 'ready') return '재시작하면 적용돼요';
+    if (st === 'none') return '지금이 최신 버전';
+    if (st === 'error') return u.message || '확인하지 못했어요';
     return '확인 전';
   }
 
@@ -182,24 +184,25 @@
     const u = app.update || {};
     const btn = el('updateBtn');
     const status = el('updateStatus');
-    if (status) status.value = updateText(u);
+    const rowState = el('updateRowState');
+    const text = updateText(u);
+    if (status) status.value = text;
+    if (rowState) rowState.textContent = text;
     if (!btn) return;
     const show = u.status === 'available' || u.status === 'downloading' || u.status === 'ready';
     btn.hidden = !show;
     if (!show) return;
-    el('updateLabel').textContent = u.status === 'ready'
-      ? '새 버전 · 재시작'
-      : `새 버전 ${u.percent || 0}%`;
+    el('updateLabel').textContent = u.status === 'ready' ? '재시작' : `새 버전 ${u.percent || 0}%`;
     btn.title = u.status === 'ready' ? '눌러서 재시작하고 새 버전을 적용해요' : '새 버전을 내려받는 중이에요';
     btn.classList.toggle('ready', u.status === 'ready');
   }
 
-  /* -------------------------------------------------- 로그 패널 */
+  /* -------------------------------------------------- 로그 */
   function appendLog(entry) {
     app.logs.push(entry);
     if (app.logs.length > 500) app.logs.shift();
     const body = el('logBody');
-    if (body.parentElement.hidden) return;
+    if (!body || body.closest('[hidden]')) return;
     const line = document.createElement('div');
     line.className = `l-${entry.level || 'info'}`;
     const t = new Date(entry.t || Date.now());
@@ -228,11 +231,62 @@
     body.scrollTop = body.scrollHeight;
   }
 
-  function toggleLog(show) {
-    const panel = el('logPanel');
-    const open = show === undefined ? panel.hidden : show;
-    panel.hidden = !open;
-    if (open) renderLogBody();
+  /* -------------------------------------------------- 액정 시트 */
+  const SHEETS = { menu: 'menuSheet', care: 'careSheet', log: 'logPanel' };
+
+  function openSheet(name) {
+    closeSheet();
+    const node = el(SHEETS[name]);
+    if (!node) return;
+    app.sheet = name;
+    node.hidden = false;
+    if (name === 'log') renderLogBody();
+    if (name === 'care') {
+      const id = window.Tama ? window.Tama.focusId() : 'oiji';
+      const def = app.botDefs.find((b) => b.id === id) || { name: '오이지', role: '' };
+      const title = el('careTitle');
+      if (title) title.textContent = `${def.name} 돌보기`;
+      el('careName').textContent = def.name;
+      const st = app.bots[id] || { state: 'idle' };
+      el('careState').textContent = `${stateLabel[st.state] || '쉬는 중'}${st.note ? ' · ' + st.note : ''}`;
+      setAvatar(el('careAvatar'), id);
+      paintCareSelection();
+    }
+    if (window.Tama) window.Tama.setVisible(false);
+  }
+
+  function closeSheet() {
+    Object.values(SHEETS).forEach((id) => { const n = el(id); if (n) n.hidden = true; });
+    app.sheet = null;
+    if (window.Tama) window.Tama.setVisible(app.view === 'tamagotchi');
+  }
+
+  function toggleSheet(name) {
+    if (app.sheet === name) closeSheet();
+    else openSheet(name);
+  }
+
+  function paintCareSelection() {
+    document.querySelectorAll('#tamaControls .tama-btn').forEach((b, i) => {
+      b.classList.toggle('sel', i === app.careIdx);
+    });
+  }
+
+  function moveCare(step) {
+    app.careIdx = (app.careIdx + step + CARE.length) % CARE.length;
+    paintCareSelection();
+  }
+
+  function runCare() {
+    const act = CARE[app.careIdx];
+    const btn = document.querySelector(`#tamaControls .tama-btn[data-act="${act}"]`);
+    if (btn) {
+      btn.classList.add('pressed');
+      setTimeout(() => btn.classList.remove('pressed'), 160);
+    }
+    // 액정을 닫아 반응(하트·간식·꽃가루)이 보이게 한다
+    closeSheet();
+    if (window.Tama) window.Tama.act(act);
   }
 
   /* -------------------------------------------------- 캐릭터 팝오버 */
@@ -332,7 +386,6 @@
     applyTheme(app.settings.theme);
   }
 
-
   /* -------------------------------------------------- 사용량 대시보드 */
   const TOOL_COLORS = { claude: '#ff7a59', codex: '#7bd1a8', gemini: '#8ab4ff' };
   const DAY_LABEL = ['일', '월', '화', '수', '목', '금', '토'];
@@ -368,7 +421,7 @@
     return `<div class="bars">${days.map((d, i) => {
       const date = new Date(`${d.date}T00:00:00`);
       const label = DAY_LABEL[date.getDay()] || '';
-      const h = Math.max(2, Math.round((d.total / max) * 34));
+      const h = Math.max(2, Math.round((d.total / max) * 32));
       const today = i === days.length - 1 ? ' today' : '';
       return `<div class="bar${today}" title="${d.date} · ${fmtFull(d.total)} 토큰"><i style="height:${h}px"></i><span>${label}</span></div>`;
     }).join('')}</div>`;
@@ -482,19 +535,45 @@
     }
   }
 
+  /* -------------------------------------------------- 화면 전환 */
   function switchView(view) {
-    app.view = view;
-    document.querySelectorAll('#viewSwitch button').forEach((b) => b.classList.toggle('on', b.dataset.view === view));
-    el('tamaView').hidden = view !== 'tamagotchi';
-    el('sceneHolder').hidden = view !== 'house';
-    el('scene').hidden = view !== 'house';
-    el('statusbar').hidden = view !== 'house';
-    el('logPanel').hidden = view === 'usage' ? true : el('logPanel').hidden;
-    el('usageView').hidden = view !== 'usage';
-    el('logBtn').hidden = view === 'usage';
-    if (window.Tama) window.Tama.setVisible(view === 'tamagotchi');
-    if (view === 'usage') loadUsage(false);
-    else if (view === 'house') window.House.setSelected(app.selected);
+    app.view = VIEWS.includes(view) ? view : 'tamagotchi';
+    document.querySelectorAll('#viewSwitch button').forEach((b) => {
+      b.classList.toggle('on', b.dataset.view === app.view);
+    });
+    el('tamaView').hidden = app.view !== 'tamagotchi';
+    el('tamaModes').hidden = app.view !== 'tamagotchi';
+    el('sceneHolder').hidden = app.view !== 'house';
+    el('usageView').hidden = app.view !== 'usage';
+    if (app.sheet) closeSheet();
+    if (window.Tama) window.Tama.setVisible(app.view === 'tamagotchi');
+    if (app.view === 'usage') loadUsage(false);
+    else if (app.view === 'house') window.House.setSelected(app.selected);
+  }
+
+  function stepView(step) {
+    const i = VIEWS.indexOf(app.view);
+    switchView(VIEWS[(i + step + VIEWS.length) % VIEWS.length]);
+  }
+
+  function stepBot(step) {
+    if (!window.Tama) return;
+    const i = BOT_IDS.indexOf(window.Tama.focusId());
+    window.Tama.focus(BOT_IDS[(i + step + BOT_IDS.length) % BOT_IDS.length]);
+  }
+
+  function toggleTamaMode() {
+    if (app.view !== 'tamagotchi') switchView('tamagotchi');
+    const on = document.querySelector('.tama-mode.on');
+    const next = on && on.dataset.mode === 'all' ? 'focus' : 'all';
+    window.Tama.setMode(next);
+  }
+
+  function tickClock() {
+    const node = el('lcdClock');
+    if (!node) return;
+    const d = new Date();
+    node.textContent = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   }
 
   /* -------------------------------------------------- 이벤트 */
@@ -510,6 +589,7 @@
       const btn = e.target.closest('button[data-view]');
       if (btn) switchView(btn.dataset.view);
     });
+
     el('tokenChip').addEventListener('click', () => switchView('usage'));
     el('usageRefresh').addEventListener('click', async () => {
       el('usageRefresh').disabled = true;
@@ -517,25 +597,28 @@
       el('usageRefresh').disabled = false;
     });
 
-    el('logBtn').addEventListener('click', () => toggleLog());
-    el('logClose').addEventListener('click', () => toggleLog(false));
-    el('logClear').addEventListener('click', () => {
-      app.logs = [];
-      el('logBody').innerHTML = '';
+    // 창 컨트롤
+    el('winMin').addEventListener('click', () => bridge.hideWindow());
+    el('winClose').addEventListener('click', () => bridge.quit());
+
+    // 물리 버튼 (D-패드 + A·B)
+    document.querySelectorAll('.dbtn, .ab-key').forEach((key) => {
+      key.addEventListener('click', () => {
+        const k = key.dataset.key;
+        const care = app.sheet === 'care';
+        if (k === 'UP') stepView(-1);
+        else if (k === 'DOWN') stepView(1);
+        else if (k === 'LEFT') { if (care) moveCare(-1); else stepBot(-1); }
+        else if (k === 'RIGHT') { if (care) moveCare(1); else stepBot(1); }
+        else if (k === 'A') { if (care) runCare(); else openSheet('care'); }
+        else if (k === 'C') toggleSheet('menu');
+        else if (k === 'B') { if (app.sheet) closeSheet(); else toggleTamaMode(); }
+      });
     });
-    el('logRestart').addEventListener('click', async () => {
-      el('logRestart').disabled = true;
-      await bridge.restartClaude();
-      el('logRestart').disabled = false;
-    });
-    el('claudeLog').addEventListener('click', () => toggleLog(true));
-    el('claudeRestart').addEventListener('click', async () => {
-      const btn = el('claudeRestart');
-      btn.disabled = true;
-      btn.textContent = '다시 연결 중…';
-      await bridge.restartClaude();
-      setTimeout(() => { btn.disabled = false; btn.textContent = '재연결'; }, 1200);
-    });
+
+    // 메뉴 시트
+    el('menuClose').addEventListener('click', closeSheet);
+    el('careClose').addEventListener('click', closeSheet);
 
     el('settingsBtn').addEventListener('click', () => {
       fillSettings();
@@ -561,21 +644,42 @@
     el('hideBtn').addEventListener('click', () => bridge.hideWindow());
     el('quitBtn').addEventListener('click', () => bridge.quit());
 
-    el('updateBtn').addEventListener('click', async () => {
-      if ((app.update || {}).status === 'ready') {
-        if (bridge.installUpdate) await bridge.installUpdate();
-      } else if (bridge.checkUpdate) {
-        app.update = await bridge.checkUpdate();
-        renderUpdate();
-      }
+    el('logBtn').addEventListener('click', () => openSheet('log'));
+    el('logClose').addEventListener('click', closeSheet);
+    el('logClear').addEventListener('click', () => {
+      app.logs = [];
+      el('logBody').innerHTML = '';
     });
-    el('updateCheck').addEventListener('click', async () => {
+    el('logRestart').addEventListener('click', async () => {
+      el('logRestart').disabled = true;
+      await bridge.restartClaude();
+      el('logRestart').disabled = false;
+    });
+    el('claudeLog').addEventListener('click', () => openSheet('log'));
+    el('claudeRestart').addEventListener('click', async () => {
+      const btn = el('claudeRestart');
+      btn.disabled = true;
+      btn.textContent = '다시 연결 중…';
+      await bridge.restartClaude();
+      setTimeout(() => { btn.disabled = false; btn.textContent = '재연결'; }, 1200);
+    });
+
+    const checkUpdate = async () => {
       if (!bridge.checkUpdate) return;
       app.update = { status: 'checking' };
       renderUpdate();
       app.update = await bridge.checkUpdate();
       renderUpdate();
+    };
+    el('updateBtn').addEventListener('click', async () => {
+      if ((app.update || {}).status === 'ready') {
+        if (bridge.installUpdate) await bridge.installUpdate();
+      } else {
+        await checkUpdate();
+      }
     });
+    el('updateRow').addEventListener('click', checkUpdate);
+    el('updateCheck').addEventListener('click', checkUpdate);
 
     el('popClose').addEventListener('click', closePopover);
     el('popToggle').addEventListener('click', async () => {
@@ -591,18 +695,32 @@
       if (e.key === 'Escape') {
         if (!el('settingsModal').hidden) el('settingsModal').hidden = true;
         else if (!el('popover').hidden) closePopover();
-        else if (!el('logPanel').hidden) toggleLog(false);
+        else if (app.sheet) closeSheet();
         return;
       }
       if (e.target && e.target.tagName === 'INPUT') return;
-      if (app.view !== 'tamagotchi') return;
+      if (app.view !== 'tamagotchi' || app.sheet) return;
       const idx = Number(e.key);
       if (idx >= 1 && idx <= 4) window.Tama.focus(BOT_IDS[idx - 1]);
+      else if (e.key === 'ArrowLeft') stepBot(-1);
+      else if (e.key === 'ArrowRight') stepBot(1);
+      else if (e.key === 'ArrowUp') stepView(-1);
+      else if (e.key === 'ArrowDown') stepView(1);
       else if (e.key === ' ' || e.key === 'Enter') {
-        if (document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('tama-btn')) return;
         e.preventDefault();
         window.Tama.act('pet');
       }
+    });
+
+    document.addEventListener('tama-focus', (e) => {
+      if (app.sheet !== 'care') return;
+      const id = (e.detail || {}).id;
+      const def = app.botDefs.find((b) => b.id === id) || { name: '오이지' };
+      const st = app.bots[id] || { state: 'idle' };
+      el('careTitle').textContent = `${def.name} 돌보기`;
+      el('careName').textContent = def.name;
+      el('careState').textContent = `${stateLabel[st.state] || '쉬는 중'}${st.note ? ' · ' + st.note : ''}`;
+      setAvatar(el('careAvatar'), id);
     });
 
     document.addEventListener('click', (e) => {
@@ -613,17 +731,6 @@
       if (e.target.closest('#scene')) return;
       closePopover();
     });
-  }
-
-  function fitScene() {
-    const holder = document.querySelector('.scene-holder');
-    const scene = el('scene');
-    if (!holder || !scene || scene.hidden) return;
-    const rect = holder.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
-    const scale = Math.min(rect.width / 16, rect.height / 9);
-    scene.style.width = `${Math.floor(scale * 16)}px`;
-    scene.style.height = `${Math.floor(scale * 9)}px`;
   }
 
   async function boot() {
@@ -637,6 +744,9 @@
     app.update = init.update || {};
 
     applyTheme(app.settings.theme || 'night');
+    tickClock();
+    setInterval(tickClock, 15000);
+
     await window.House.init({
       canvas: el('house'),
       scene: el('scene'),
