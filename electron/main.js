@@ -10,10 +10,14 @@ const { ClaudeManager } = require('./claude-manager');
 const { StatusServer } = require('./status-server');
 const { BOTS, initialBotState, isBot } = require('./bots');
 const { UsageMonitor } = require('./usage');
+const { ExternalClaudeWatcher } = require('./external-claude');
 
 const ROOT = path.join(__dirname, '..');
 const WORKING_WINDOW_MS = 25000;   // 최근 25초 안에 활동이 있으면 '작업 중'
 const SIGNAL_TTL_MS = 30 * 60 * 1000; // 외부에서 받은 상태는 30분 뒤 기본값으로
+const HEARTBEAT_TTL_MS = 10 * 60 * 1000; // 원격 봇이 10분 넘게 신호가 없으면 오프라인
+const GIST_POLL_MS = 60 * 1000;          // Gist 상태 확인 간격
+const EXTERNAL_WORKING_MS = 60 * 1000;   // 다른 창 세션: 대화 기록이 1분 안에 갱신되면 '작업 중'
 
 let win = null;
 let tray = null;
@@ -22,6 +26,7 @@ let manager = null;
 let statusServer = null;
 let statusPollTimer = null;
 let usageMonitor = null;
+let externalClaude = null;
 let quitting = false;
 let lastBotsPush = 0;
 
@@ -37,14 +42,37 @@ function computeBots() {
     if (bot.id === 'claude') {
       const c = manager ? manager.status : 'stopped';
       const connected = c === 'running' || c === 'starting';
-      const busy = connected && manager.lastActivity && (now - manager.lastActivity < WORKING_WINDOW_MS);
-      base.state = connected ? (busy ? 'working' : 'idle') : 'offline';
-      base.connected = connected;
-      base.connection = c;
-      base.message = manager ? manager.message : '';
-      base.lastActivity = busy ? manager.lastActivity : (manager.lastActivity || null);
-      base.note = connected ? (busy ? '채널에서 작업 중' : '채널 연결됨') : '채널 연결 안 됨';
-      base.source = 'process';
+      const ext = externalClaude ? externalClaude.snapshot() : null;
+      if (!connected && ext && ext.running) {
+        // 앱이 띄운 세션은 없지만 다른 창에서 켠 claude --channels 가 살아 있음
+        const busy = ext.lastActivity && (now - ext.lastActivity < EXTERNAL_WORKING_MS);
+        base.state = busy ? 'working' : 'idle';
+        base.connected = true;
+        base.connection = 'external';
+        base.message = '다른 창에서 실행 중인 세션';
+        base.lastActivity = ext.lastActivity || null;
+        base.note = busy ? '다른 창에서 작업 중' : '다른 창에서 연결됨';
+        base.source = 'external';
+      } else {
+        const busy = connected && manager.lastActivity && (now - manager.lastActivity < WORKING_WINDOW_MS);
+        base.state = connected ? (busy ? 'working' : 'idle') : 'offline';
+        base.connected = connected;
+        base.connection = c;
+        base.message = manager ? manager.message : '';
+        base.lastActivity = busy ? manager.lastActivity : (manager.lastActivity || null);
+        base.note = connected ? (busy ? '채널에서 작업 중' : '채널 연결됨') : '채널 연결 안 됨';
+        base.source = 'process';
+      }
+    } else if (sig.source === 'url' && sig.heartbeatAt) {
+      // 원격 봇: 봇이 직접 찍은 시각(heartbeatAt) 기준. 오래 신호가 없으면 오프라인.
+      const age = now - sig.heartbeatAt;
+      if (age > HEARTBEAT_TTL_MS) {
+        base.state = 'offline';
+        base.note = `신호 끊김 · 마지막 ${formatAgo(age)}`;
+        base.connected = false;
+      } else {
+        base.connected = true;
+      }
     } else {
       if (sig.updatedAt && now - sig.updatedAt > SIGNAL_TTL_MS && sig.source !== 'manual') {
         base.state = 'idle';
@@ -88,27 +116,76 @@ function setBotState({ bot, state, note, source, usage }) {
 }
 
 /* --------------------------------------------------------------- 상태 폴링 */
+// 상태 주소가 GitHub Gist면 Gist ID를 돌려준다. (gist URL 또는 32자리 ID 그대로 입력 가능)
+function gistIdFrom(url) {
+  const m = url.match(/^(?:https?:\/\/gist\.github\.com\/(?:[^/]+\/)?)?([0-9a-f]{20,40})\/?$/i);
+  return m ? m[1] : null;
+}
+
+function parseTime(v) {
+  if (typeof v === 'number' && Number.isFinite(v)) return v < 1e12 ? v * 1000 : v; // 초 단위도 허용
+  if (typeof v === 'string') { const t = Date.parse(v); if (!Number.isNaN(t)) return t; }
+  return null;
+}
+
+function formatAgo(ms) {
+  const m = Math.round(ms / 60000);
+  if (m < 60) return `${m}분 전`;
+  const h = Math.round(m / 60);
+  return h < 24 ? `${h}시간 전` : `${Math.round(h / 24)}일 전`;
+}
+
+function applyRemoteSignal(id, value) {
+  if (!isBot(id) || id === 'claude') return;
+  const state = typeof value === 'string' ? value : value && value.state;
+  if (!['idle', 'working', 'offline'].includes(state)) return;
+  const now = Date.now();
+  const sig = botSignals[id];
+  sig.state = state;
+  sig.note = (value && typeof value.note === 'string' && value.note.slice(0, 80)) || '';
+  sig.updatedAt = now;
+  sig.source = 'url';
+  // 봇이 보낸 시각이 있으면 그걸로 생존 판단, 없으면 받은 시각. 미래 시각은 지금으로 자름.
+  sig.heartbeatAt = Math.min(parseTime(value && value.updatedAt) || now, now);
+  if (state === 'working') sig.lastActivity = sig.heartbeatAt;
+}
+
+const gistCache = { id: null, etag: null, files: null, fetchedAt: 0 };
+
 async function pollStatusUrl() {
   const settings = store.all();
   const url = (settings.statusUrl || '').trim();
   if (!url) return;
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-    if (!res.ok) return;
-    const data = await res.json();
-    const bots = data && (data.bots || data);
-    if (!bots || typeof bots !== 'object') return;
-    for (const [id, value] of Object.entries(bots)) {
-      if (!isBot(id) || id === 'claude') continue;
-      const state = typeof value === 'string' ? value : value && value.state;
-      if (!['idle', 'working', 'offline'].includes(state)) continue;
-      const note = (value && value.note) || '';
-      const sig = botSignals[id];
-      sig.state = state;
-      sig.note = note || sig.note;
-      sig.updatedAt = Date.now();
-      sig.source = 'url';
-      if (state === 'working') sig.lastActivity = Date.now();
+    const gistId = gistIdFrom(url);
+    if (gistId) {
+      // GitHub API 무인증 한도(시간당 60회) 때문에 Gist는 60초마다만 확인. 304 응답은 한도에 안 잡힘.
+      if (gistCache.id === gistId && Date.now() - gistCache.fetchedAt < GIST_POLL_MS) return;
+      if (gistCache.id !== gistId) Object.assign(gistCache, { id: gistId, etag: null, files: null });
+      gistCache.fetchedAt = Date.now();
+      const headers = { 'User-Agent': 'BotHouse', Accept: 'application/vnd.github+json' };
+      if (gistCache.etag) headers['If-None-Match'] = gistCache.etag;
+      const res = await fetch(`https://api.github.com/gists/${gistId}`, { headers, signal: AbortSignal.timeout(8000) });
+      if (res.status === 200) {
+        const data = await res.json();
+        gistCache.etag = res.headers.get('etag');
+        gistCache.files = data.files || {};
+      } else if (res.status !== 304) {
+        return;
+      }
+      if (!gistCache.files) return;
+      // 파일 하나 = 봇 하나 (oiji.json, takuan.json, sbji.json). 서로 덮어쓰지 않게 분리.
+      for (const [name, file] of Object.entries(gistCache.files)) {
+        const id = name.replace(/\.json$/i, '');
+        try { applyRemoteSignal(id, JSON.parse(file.content || '{}')); } catch (_) { /* 깨진 파일은 건너뜀 */ }
+      }
+    } else {
+      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      if (!res.ok) return;
+      const data = await res.json();
+      const bots = data && (data.bots || data);
+      if (!bots || typeof bots !== 'object') return;
+      for (const [id, value] of Object.entries(bots)) applyRemoteSignal(id, value);
     }
     pushBots(true);
   } catch (_) { /* 조용히 무시 */ }
@@ -453,8 +530,19 @@ if (!gotLock) {
     }, 60000);
     statusPollTimer = setInterval(pollStatusUrl, 15000);
 
+    externalClaude = new ExternalClaudeWatcher({ onChange: () => pushBots(true) });
+    externalClaude.start();
+
     if (store.get('autoConnect')) {
-      setTimeout(() => manager.start().catch(() => {}), 900);
+      setTimeout(async () => {
+        // 다른 창에서 이미 같은 채널을 쓰고 있으면 새로 띄우지 않는다 (같은 봇 토큰 이중 연결 → 계속 실패함)
+        await externalClaude.scan();
+        if (externalClaude.running) {
+          manager.log('다른 창에서 Claude 채널이 이미 실행 중이라 새로 띄우지 않아요.', 'muted');
+          return;
+        }
+        manager.start().catch(() => {});
+      }, 900);
     }
   });
 
@@ -462,6 +550,7 @@ if (!gotLock) {
     quitting = true;
     try { manager.dispose(); } catch (_) { /* noop */ }
     try { statusServer.stop(); } catch (_) { /* noop */ }
+    try { if (externalClaude) externalClaude.stop(); } catch (_) { /* noop */ }
     clearInterval(statusPollTimer);
   });
 
