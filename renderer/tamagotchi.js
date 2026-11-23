@@ -457,9 +457,9 @@
 
   function spriteSize() {
     const lh = state.view.lh;
-    if (lh > 210) return 96;
-    if (lh > 130) return 64;
-    if (lh > 92) return 64;
+    // 액정에 비해 너무 크지 않게 (장현님 피드백: 1.0.3은 너무 큼)
+    if (lh > 210) return 64;
+    if (lh > 92) return 48;
     return 32;
   }
 

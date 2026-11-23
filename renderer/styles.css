@@ -712,8 +712,9 @@ body.theme-day .tama-glass { background-image: radial-gradient(rgba(80, 60, 40, 
   position: absolute;
   inset: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
+  /* B모드: 4마리 한 줄 */
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: 1fr;
   gap: 2px;
   background: rgba(8, 6, 20, .5);
   z-index: 2;

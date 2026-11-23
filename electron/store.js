@@ -15,6 +15,7 @@ const DEFAULTS = {
   statusApiEnabled: true,
   statusApiPort: 47820,
   statusUrl: '',
+  deviceScale: 0.7, // 기기 창 크기 배율 (트레이 메뉴 → 기기 크기)
   // 앱 안 채팅 (텔레그램 사용자 계정). API ID/Hash는 my.telegram.org 에서 발급
   tgApiId: '',
   tgApiHash: '',

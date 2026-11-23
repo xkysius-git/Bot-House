@@ -245,12 +245,43 @@ function send(channel, payload) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
 }
 
+// 기기 크기: 화면은 1220x800 기준으로 그려져 있고, 창 크기와 확대율을 같이 줄여서 통째로 축소한다.
+const DEVICE_BASE = { w: 1220, h: 800 };
+const DEVICE_SCALES = [
+  { label: '아주 작게', value: 0.5 },
+  { label: '작게', value: 0.6 },
+  { label: '보통', value: 0.7 },
+  { label: '크게', value: 0.85 },
+  { label: '원래 크기', value: 1 }
+];
+
+function deviceScale() {
+  const v = Number(store.get('deviceScale'));
+  return v >= 0.4 && v <= 1.5 ? v : 0.7;
+}
+
+function applyDeviceScale() {
+  if (!win || win.isDestroyed()) return;
+  const s = deviceScale();
+  win.setResizable(true);
+  win.setContentSize(Math.round(DEVICE_BASE.w * s), Math.round(DEVICE_BASE.h * s));
+  win.setResizable(false);
+  win.webContents.setZoomFactor(s);
+}
+
+function setDeviceScale(value) {
+  store.set({ deviceScale: value });
+  applyDeviceScale();
+  buildTrayMenu();
+}
+
 function createWindow() {
+  const s = deviceScale();
   win = new BrowserWindow({
     // 디지바이스 기기 모양 그대로 바탕화면에 띄우기: 창 테두리 없음 + 투명 배경 + 기기 크기 고정
     // 이동은 renderer의 -webkit-app-region: drag 영역(기기 상단), 닫기/숨기기는 기기 버튼
-    width: 1220,
-    height: 800,
+    width: Math.round(DEVICE_BASE.w * s),
+    height: Math.round(DEVICE_BASE.h * s),
     useContentSize: true,
     frame: false,
     transparent: true,
@@ -272,6 +303,9 @@ function createWindow() {
 
   win.setMenuBarVisibility(false);
   win.loadFile(path.join(ROOT, 'renderer', 'index.html'));
+
+  // 페이지를 새로 그릴 때마다 확대율 다시 적용 (Electron은 새로고침 때 확대율이 풀릴 수 있음)
+  win.webContents.on('did-finish-load', () => win.webContents.setZoomFactor(deviceScale()));
 
   win.once('ready-to-show', () => {
     win.show();
@@ -322,8 +356,25 @@ function buildTray() {
     return;
   }
   tray.setToolTip('Bot House — 봇들이 사는 집');
+  buildTrayMenu();
+  tray.on('double-click', () => showWindow());
+  tray.on('click', () => showWindow());
+}
+
+function buildTrayMenu() {
+  if (!tray) return;
+  const current = deviceScale();
   const menu = Menu.buildFromTemplate([
     { label: 'Bot House 열기', click: () => showWindow() },
+    {
+      label: '기기 크기',
+      submenu: DEVICE_SCALES.map((o) => ({
+        label: o.label,
+        type: 'radio',
+        checked: Math.abs(o.value - current) < 0.001,
+        click: () => setDeviceScale(o.value)
+      }))
+    },
     { type: 'separator' },
     { label: 'Claude 채널 재연결', click: () => { manager.restart(); showWindow(); } },
     { label: 'Claude 채널 멈추기', click: () => manager.stop(true) },
@@ -331,8 +382,6 @@ function buildTray() {
     { label: '종료', click: () => { quitting = true; app.quit(); } }
   ]);
   tray.setContextMenu(menu);
-  tray.on('double-click', () => showWindow());
-  tray.on('click', () => showWindow());
 }
 
 /* --------------------------------------------------------------- 자동 업데이트 */
