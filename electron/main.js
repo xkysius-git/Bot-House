@@ -171,6 +171,36 @@ function applyRemoteSignal(id, value) {
 
 const gistCache = { id: null, etag: null, files: null, fetchedAt: 0 };
 
+// 앱 안 채팅으로 들어온 봇 메시지로 상태 추정 (Gist를 못 쓰는 봇용: 오이지·석박지 등)
+const START_WORDS = /(작업\s*시작|착수|진행할게|진행하겠|시작할게|시작하겠|바로\s*진행|처리\s*중|작업\s*중)/;
+const DONE_WORDS = /(완료|끝났|마쳤|마무리했|반영했|보고드립니다|정리\s*끝)/;
+
+function applyChatSignal(msg) {
+  if (!msg || !msg.isBot || !msg.username) return;
+  const def = BOTS.find((b) => b.handle && b.handle.replace(/^@/, '').toLowerCase() === msg.username.toLowerCase());
+  if (!def || def.id === 'claude') return;
+  const sig = botSignals[def.id];
+  const now = Date.now();
+  sig.lastActivity = Math.min(msg.date || now, now);
+  // Gist 신호가 살아 있으면 그게 더 정확하니 활동 시각만 갱신
+  if (sig.source === 'url' && sig.heartbeatAt && now - sig.heartbeatAt < HEARTBEAT_TTL_MS) { pushBots(true); return; }
+  const text = msg.text || '';
+  const firstLine = text.split('\n').find((l) => l.trim()) || '';
+  if (DONE_WORDS.test(text)) {
+    sig.state = 'idle';
+    sig.note = `방금 보고 · ${firstLine.slice(0, 40)}`;
+  } else if (START_WORDS.test(text)) {
+    sig.state = 'working';
+    sig.note = firstLine.slice(0, 60);
+  } else if (sig.state !== 'working') {
+    sig.state = 'idle';
+    sig.note = '채팅방에서 대화 중';
+  }
+  sig.updatedAt = now; // 30분(SIGNAL_TTL_MS) 조용하면 기본 '쉬는 중'으로 돌아감
+  sig.source = 'chat';
+  pushBots(true);
+}
+
 async function pollStatusUrl() {
   const settings = store.all();
   const url = (settings.statusUrl || '').trim();
@@ -540,7 +570,7 @@ if (!gotLock) {
 
     chat = new TelegramChat({ store, userDataDir: app.getPath('userData'), safeStorage });
     chat.on('status', (snap) => send('chat:status', snap));
-    chat.on('message', (msg) => send('chat:message', msg));
+    chat.on('message', (msg) => { send('chat:message', msg); applyChatSignal(msg); });
     chat.on('edited', (msg) => send('chat:edited', msg));
     chat.on('log', (line) => manager.log(line, 'warn'));
 
