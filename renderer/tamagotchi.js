@@ -440,7 +440,9 @@
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     state.canvas.width = Math.round(w * dpr);
     state.canvas.height = Math.round(h * dpr);
-    const s = Math.max(1, Math.floor(w / W));
+    // 한 논리 픽셀이 정확히 정수 개의 장치 픽셀에 놓이도록 배율을 맞춘다 (윈도우 배율에서도 도트가 뭉개지지 않게)
+    const dev = Math.max(1, Math.floor((w * dpr) / W));
+    const s = dev / dpr;
     state.view = { w, h, s, lw: w / s, lh: h / s, dpr };
   }
 
