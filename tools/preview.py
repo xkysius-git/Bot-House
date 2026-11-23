@@ -21,8 +21,8 @@ def scene(mode="night", out="preview_scene.png", seated=True):
     plac = [
         ("oiji", "walk", 0, (62, 240)),
         ("takuan", "idle", 0, (150, 246)),
-        ("sbji", "work", 1, (400, 186)),
-        ("claude", "work", 0, (448, 186)),
+        ("sbji", "work", 1, (400, 178)),
+        ("claude", "work", 0, (448, 178)),
     ] if seated else []
     for name, anim, i, (x, y) in plac:
         fr = frame(name, anim, i)

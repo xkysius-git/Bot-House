@@ -475,8 +475,7 @@ def draw_text5(d, x, y, text, color):
 
 
 # ------------------------------------------------------------------ sprites
-from sprites import build as build_sprite
-
+from sprites import build as build_sprite, build_clawd
 
 CHARS = {
     "oiji": dict(shape="clover", pal=dict(
@@ -492,10 +491,9 @@ CHARS = {
         petals=[["#C77BF2", "#A855F0", "#8B3FC0"],
                 ["#FF7BB8", "#F1439B", "#C92D7B"],
                 ["#FFB077", "#FF8A3D", "#D96625"]])),
-    "claude": dict(shape="clover", pal=dict(
-        line="#8E3F2C", eye="#2A1A20", spec="#FFD8C8", feet="#A34A33",
-        spark="#FFD98F",
-        tones=["#F2A48B", "#E07A5F", "#BE5C44"])),
+    "claude": dict(shape="clawd", pal=dict(
+        line="#7B3A24", eye="#241318", spec="#EFA184",
+        tones=["#E08465", "#D97757", "#B2593E"])),
 }
 
 if __name__ == "__main__":
@@ -506,26 +504,34 @@ if __name__ == "__main__":
 
     atlas = {}
     for name, cfg in CHARS.items():
-        build_sprite(cfg["shape"], cfg["pal"]).save(os.path.join(OUT, "sprites", f"{name}.png"))
+        sheet = build_clawd(cfg["pal"]) if cfg["shape"] == "clawd" else build_sprite(cfg["shape"], cfg["pal"])
+        sheet.save(os.path.join(OUT, "sprites", f"{name}.png"))
         atlas[name] = {"frameSize": S, "idle": [0, 1], "walk": [2, 3, 4, 5],
                        "work": [6, 7, 8, 9], "sleep": [10]}
     json.dump(atlas, open(os.path.join(OUT, "sprites", "atlas.json"), "w"), indent=2)
 
-    # icon
+    # icon — 집 앞에 오이지(왼쪽)와 클로드 Clawd(오른쪽)가 서 있는 모양
     icon = Image.new("RGB", (512, 512), "#221b36")
     di = ImageDraw.Draw(icon)
     di.rounded_rectangle([0, 0, 511, 511], radius=96, fill="#2b2440")
     di.polygon([(64, 250), (256, 96), (448, 250)], fill="#3d3357")
     di.rectangle([96, 244, 416, 420], fill="#332b47")
-    di.rectangle([196, 320, 316, 420], fill="#1b1630")
-    for (bx, tone) in ((170, ("#63D98C", "#3FBF6A", "#31A156")), (342, ("#F09A80", "#E07A5F", "#C25E45"))):
-        di.ellipse([bx - 56, 250, bx + 56, 362], fill=tone[1])
-        di.ellipse([bx - 56, 190, bx + 56, 302], fill=tone[1])
-        di.rectangle([bx - 56, 250, bx + 56, 302], fill=tone[1])
-        di.ellipse([bx - 50, 196, bx - 10, 240], fill=tone[0])
-        di.ellipse([bx - 26, 268, bx - 2, 306], fill="#241a2e")
-        di.ellipse([bx + 4, 268, bx + 28, 306], fill="#241a2e")
-        di.ellipse([bx - 22, 274, bx - 12, 286], fill="#ffffff")
-        di.ellipse([bx + 8, 274, bx + 18, 286], fill="#ffffff")
+    di.rectangle([196, 320, 296, 420], fill="#1b1630")
+    bx, tone = 150, ("#63D98C", "#3FBF6A", "#31A156")
+    di.ellipse([bx - 56, 250, bx + 56, 362], fill=tone[1])
+    di.ellipse([bx - 56, 190, bx + 56, 302], fill=tone[1])
+    di.rectangle([bx - 56, 250, bx + 56, 302], fill=tone[1])
+    di.ellipse([bx - 50, 196, bx - 10, 240], fill=tone[0])
+    di.ellipse([bx - 26, 268, bx - 2, 306], fill="#241a2e")
+    di.ellipse([bx + 4, 268, bx + 28, 306], fill="#241a2e")
+    di.ellipse([bx - 22, 274, bx - 12, 286], fill="#ffffff")
+    di.ellipse([bx + 8, 274, bx + 18, 286], fill="#ffffff")
+    # 클로드: 스프라이트 프레임을 6배로 키워 발끈을 바닥(366)에 맞춘다
+    clawd = build_clawd(CHARS["claude"]["pal"]).crop((0, 0, S, S))
+    k = 6
+    clawd = clawd.resize((S * k, S * k), Image.NEAREST)
+    icon.paste(clawd, (244, 366 - 30 * k), clawd)
+    di.rectangle([70, 366, 442, 368], fill="#241d34")
     icon.save(os.path.join(OUT, "icon.png"))
+    icon.resize((32, 32), Image.LANCZOS).save(os.path.join(OUT, "tray.png"))
     print("ok")

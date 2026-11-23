@@ -203,6 +203,110 @@ function buildTray() {
   tray.on('click', () => showWindow());
 }
 
+/* --------------------------------------------------------------- 자동 업데이트 */
+const updateState = {
+  status: 'idle',      // idle | checking | available | downloading | ready | none | error | dev
+  version: null,
+  percent: 0,
+  message: '',
+  checkedAt: null
+};
+
+function pushUpdate(patch) {
+  Object.assign(updateState, patch, { checkedAt: Date.now() });
+  send('update', { ...updateState });
+  return { ...updateState };
+}
+
+function setupUpdater() {
+  let autoUpdater;
+  try {
+    ({ autoUpdater } = require('electron-updater'));
+  } catch (err) {
+    console.error('[update] electron-updater를 불러오지 못했어요:', err.message);
+    pushUpdate({ status: 'error', message: '업데이트 모듈을 불러오지 못했어요' });
+    return;
+  }
+
+  // 개발 실행(npm start)에서는 업데이트를 확인하지 않는다.
+  if (!app.isPackaged) {
+    pushUpdate({ status: 'dev', message: '개발 실행 중에는 업데이트를 확인하지 않아요' });
+    return;
+  }
+
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.logger = null;
+
+  autoUpdater.on('checking-for-update', () => pushUpdate({ status: 'checking', message: '새 버전을 확인하는 중' }));
+  autoUpdater.on('update-available', (info) => {
+    pushUpdate({ status: 'available', version: info && info.version, percent: 0, message: '새 버전을 내려받는 중' });
+  });
+  autoUpdater.on('update-not-available', () => {
+    pushUpdate({ status: 'none', version: app.getVersion(), percent: 0, message: '지금이 최신 버전이에요' });
+  });
+  autoUpdater.on('download-progress', (p) => {
+    const percent = Math.max(0, Math.min(100, Math.round((p && p.percent) || 0)));
+    pushUpdate({ status: 'downloading', percent, message: `새 버전을 내려받는 중 ${percent}%` });
+  });
+  autoUpdater.on('update-downloaded', (info) => {
+    pushUpdate({ status: 'ready', version: info && info.version, percent: 100, message: '새 버전 준비 완료 — 재시작하면 적용돼요' });
+    if (tray && process.platform === 'win32') {
+      tray.displayBalloon?.({
+        title: 'Bot House 새 버전',
+        content: '새 버전 다운로드가 끝났어요. 앱을 재시작하면 적용됩니다.'
+      });
+    }
+    if (win && !win.isDestroyed()) {
+      if (!win.isVisible()) win.show();
+    }
+    const box = {
+      type: 'info',
+      buttons: ['지금 재시작', '나중에'],
+      defaultId: 0,
+      cancelId: 1,
+      title: 'Bot House 새 버전',
+      message: '새 버전 다운로드가 끝났어요.',
+      detail: '지금 재시작하면 바로 적용되고, 나중에 눌러도 앱을 종료할 때 자동으로 설치돼요.'
+    };
+    const shown = (win && !win.isDestroyed())
+      ? dialog.showMessageBox(win, box)
+      : dialog.showMessageBox(box);
+    shown.then((result) => {
+      if (result.response === 0) installUpdateNow();
+    }).catch(() => {});
+  });
+  autoUpdater.on('error', (err) => {
+    pushUpdate({ status: 'error', message: `업데이트 확인 실패: ${err && err.message ? err.message : '알 수 없는 오류'}` });
+  });
+
+  const check = (delay) => {
+    setTimeout(() => {
+      autoUpdater.checkForUpdates().catch((err) => {
+        pushUpdate({ status: 'error', message: `업데이트 확인 실패: ${err && err.message ? err.message : '알 수 없는 오류'}` });
+      });
+    }, delay);
+  };
+  check(15000);                 // 앱이 뜨고 15초 뒤 한 번
+  setInterval(() => check(0), 6 * 60 * 60 * 1000);  // 그 뒤 6시간마다
+
+  updaterRef = autoUpdater;
+}
+
+let updaterRef = null;
+
+function installUpdateNow() {
+  if (!updaterRef) return { ok: false, message: '업데이트 모듈이 준비되지 않았어요' };
+  quitting = true;
+  try {
+    updaterRef.quitAndInstall(false, true);
+    return { ok: true };
+  } catch (err) {
+    quitting = false;
+    return { ok: false, message: err.message };
+  }
+}
+
 /* --------------------------------------------------------------- IPC */
 function registerIpc() {
   ipcMain.handle('app:init', () => ({
@@ -212,6 +316,7 @@ function registerIpc() {
     claude: manager.snapshot(),
     logs: manager.logBuffer.slice(-300),
     version: app.getVersion(),
+    update: { ...updateState },
     statusServer: { running: statusServer.running, port: statusServer.port, error: statusServer.error },
     home: os.homedir()
   }));
@@ -272,6 +377,17 @@ function registerIpc() {
   });
 
   ipcMain.handle('window:hide', () => { if (win) win.hide(); });
+  ipcMain.handle('update:get', () => ({ ...updateState }));
+  ipcMain.handle('update:check', async () => {
+    if (!updaterRef) return { ...updateState };
+    try {
+      await updaterRef.checkForUpdates();
+    } catch (err) {
+      pushUpdate({ status: 'error', message: `업데이트 확인 실패: ${err.message}` });
+    }
+    return { ...updateState };
+  });
+  ipcMain.handle('update:install', () => installUpdateNow());
   ipcMain.handle('app:quit', () => { quitting = true; app.quit(); });
   ipcMain.handle('shell:open', (_event, url) => {
     if (typeof url === 'string' && /^https?:/i.test(url)) shell.openExternal(url);
@@ -325,6 +441,7 @@ if (!gotLock) {
     registerIpc();
     createWindow();
     buildTray();
+    setupUpdater();
 
     // 활동이 끊기면 '작업 중'이 저절로 풀리도록 주기적으로 알린다.
     setInterval(() => pushBots(true), 4000);

@@ -714,3 +714,17 @@ input[type="text"]:focus { border-color: var(--accent); }
 
 .token-chip { gap: 6px; font-variant-numeric: tabular-nums; }
 .token-dot { width: 8px; height: 8px; border-radius: 2px; background: var(--accent); box-shadow: 0 0 0 3px rgba(255,122,89,.14); }
+
+/* 앱 업데이트 알림 */
+.update-chip { gap: 7px; color: var(--work); border-color: rgba(255, 190, 90, .45); }
+.update-chip:hover { background: rgba(255, 190, 90, .12); }
+.update-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--work);
+  box-shadow: 0 0 0 3px rgba(255, 190, 90, .16);
+  animation: updatePulse 1.6s ease-in-out infinite;
+}
+@keyframes updatePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .45; }
+}

@@ -17,6 +17,7 @@
     statusServer: {},
     popBot: null,
     usage: null,
+    update: {},
     view: 'house'
   };
 
@@ -68,6 +69,8 @@
     document.querySelectorAll('.avatar').forEach((node) => {
       const id = node.dataset.bot;
       if (!id) return;
+      const src = `url('../assets/sprites/${id}.png')`;
+      if (node.style.backgroundImage !== src) node.style.backgroundImage = src;
       const st = (app.bots[id] && app.bots[id].state) || 'idle';
       const anim = st === 'working' ? 'work' : st === 'offline' ? 'sleep' : 'idle';
       const list = frames[anim];
@@ -159,6 +162,35 @@
     renderStatusBar();
     renderBotList();
     renderClaudeCard();
+    renderUpdate();
+  }
+
+  /* 업데이트 알림 -------------------------------------------------- */
+  function updateText(u) {
+    const st = u.status || 'idle';
+    if (st === 'dev') return '개발 실행 중에는 업데이트를 확인하지 않아요';
+    if (st === 'checking') return '새 버전을 확인하는 중이에요';
+    if (st === 'available' || st === 'downloading') return u.message || `새 버전을 내려받는 중 ${u.percent || 0}%`;
+    if (st === 'ready') return '새 버전 준비 완료 — 재시작하면 적용돼요';
+    if (st === 'none') return '지금이 최신 버전이에요';
+    if (st === 'error') return u.message || '업데이트를 확인하지 못했어요';
+    return '확인 전';
+  }
+
+  function renderUpdate() {
+    const u = app.update || {};
+    const btn = el('updateBtn');
+    const status = el('updateStatus');
+    if (status) status.value = updateText(u);
+    if (!btn) return;
+    const show = u.status === 'available' || u.status === 'downloading' || u.status === 'ready';
+    btn.hidden = !show;
+    if (!show) return;
+    el('updateLabel').textContent = u.status === 'ready'
+      ? '새 버전 · 재시작'
+      : `새 버전 ${u.percent || 0}%`;
+    btn.title = u.status === 'ready' ? '눌러서 재시작하고 새 버전을 적용해요' : '새 버전을 내려받는 중이에요';
+    btn.classList.toggle('ready', u.status === 'ready');
   }
 
   /* -------------------------------------------------- 로그 패널 */
@@ -521,6 +553,22 @@
     el('hideBtn').addEventListener('click', () => bridge.hideWindow());
     el('quitBtn').addEventListener('click', () => bridge.quit());
 
+    el('updateBtn').addEventListener('click', async () => {
+      if ((app.update || {}).status === 'ready') {
+        if (bridge.installUpdate) await bridge.installUpdate();
+      } else if (bridge.checkUpdate) {
+        app.update = await bridge.checkUpdate();
+        renderUpdate();
+      }
+    });
+    el('updateCheck').addEventListener('click', async () => {
+      if (!bridge.checkUpdate) return;
+      app.update = { status: 'checking' };
+      renderUpdate();
+      app.update = await bridge.checkUpdate();
+      renderUpdate();
+    });
+
     el('popClose').addEventListener('click', closePopover);
     el('popToggle').addEventListener('click', async () => {
       const id = el('popToggle').dataset.bot;
@@ -568,6 +616,7 @@
     app.claude = init.claude || {};
     app.logs = init.logs || [];
     app.statusServer = init.statusServer || {};
+    app.update = init.update || {};
 
     applyTheme(app.settings.theme || 'night');
     await window.House.init({
@@ -589,6 +638,7 @@
     bridge.onLog((entry) => appendLog(entry));
     bridge.onSettings((settings) => { app.settings = settings; applyTheme(settings.theme); });
     bridge.onUsage((u) => { if (app.view === 'usage') renderUsage(u); });
+    if (bridge.onUpdate) bridge.onUpdate((u) => { app.update = u; renderUpdate(); });
     loadUsage(false);
   }
 

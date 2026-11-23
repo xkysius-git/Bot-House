@@ -25,6 +25,10 @@
           <span class="token-dot"></span>
           <span id="tokenToday">–</span>
         </button>
+        <button class="ghost update-chip" id="updateBtn" type="button" hidden>
+          <span class="update-dot"></span>
+          <span id="updateLabel">새 버전</span>
+        </button>
         <button class="ghost" id="themeBtn" type="button" title="낮/밤 전환">
           <span class="dot-swatch" id="themeSwatch"></span>
           <span id="themeLabel">밤</span>
@@ -163,6 +167,15 @@
           <button type="button" data-theme="night">밤</button>
           <button type="button" data-theme="day">낮</button>
         </div>
+      </div>
+
+      <div class="field">
+        <label>앱 업데이트</label>
+        <div class="row">
+          <input type="text" id="updateStatus" readonly value="확인 전">
+          <button class="ghost" id="updateCheck" type="button">업데이트 확인</button>
+        </div>
+        <p class="desc">새 버전이 나오면 자동으로 내려받고, 재시작할 때 적용해요.</p>
       </div>
 
       <details class="advanced">

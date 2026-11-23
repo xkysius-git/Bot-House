@@ -26,6 +26,9 @@ contextBridge.exposeInMainWorld('botHouse', {
   getLogs: () => ipcRenderer.invoke('logs:get'),
   getUsage: (force) => ipcRenderer.invoke('usage:get', !!force),
   statusInfo: () => ipcRenderer.invoke('status:info'),
+  getUpdate: () => ipcRenderer.invoke('update:get'),
+  checkUpdate: () => ipcRenderer.invoke('update:check'),
+  installUpdate: () => ipcRenderer.invoke('update:install'),
   hideWindow: () => ipcRenderer.invoke('window:hide'),
   quit: () => ipcRenderer.invoke('app:quit'),
   openExternal: (url) => ipcRenderer.invoke('shell:open', url),
@@ -34,5 +37,6 @@ contextBridge.exposeInMainWorld('botHouse', {
   onLog: (handler) => on('log', handler),
   onSettings: (handler) => on('settings', handler),
   onUsage: (handler) => on('usage', handler),
+  onUpdate: (handler) => on('update', handler),
   platform: process.platform
 });

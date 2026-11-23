@@ -65,6 +65,11 @@ async def main():
         await page.wait_for_timeout(6000)
         await page.screenshot(path=os.path.join(OUT, "08-idle.png"))
 
+        # 8) 새 버전 다운로드 완료 알림
+        await page.goto(f"{URL}?demo=update")
+        await page.wait_for_timeout(2500)
+        await page.screenshot(path=os.path.join(OUT, "09-update.png"))
+
         print(json.dumps({"errors": errors[:20], "out": OUT}, ensure_ascii=False, indent=2))
         await browser.close()
 

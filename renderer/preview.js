@@ -20,7 +20,9 @@
     claude: { state: demo === 'idle' ? 'idle' : 'working', note: demo === 'idle' ? '채널 연결됨' : '여수 하프 훈련표 정리', lastActivity: Date.now() - 1000 * 12, connected: true, connection: 'running' }
   };
 
-  const listeners = { bots: [], claude: [], log: [], settings: [], usage: [] };
+  const listeners = { bots: [], claude: [], log: [], settings: [], usage: [], update: [] };
+
+  let update = { status: 'none', version: '1.0.1', percent: 0, message: '지금이 최신 버전이에요' };
 
   const claude = {
     status: 'running', message: '연결됨', pid: 8420, startedAt: Date.now() - 1000 * 60 * 74,
@@ -44,7 +46,7 @@
 
   window.PreviewBridge = {
     init: async () => ({
-      settings, bots, claude, logs, version: '1.0.0', botDefs: BOTS,
+      settings, bots, claude, logs, version: '1.0.1', botDefs: BOTS, update,
       statusServer: { running: true, port: 47820, error: '' },
       home: 'C:\\Users\\XKY'
     }),
@@ -62,6 +64,10 @@
     getUsage: async () => window.__USAGE__ || { updatedAt: Date.now(), tools: [], days: [] },
     onUsage: (f) => { listeners.usage.push(f); return () => {}; },
     statusInfo: async () => ({ running: true, port: 47820, error: '', url: 'http://127.0.0.1:47820/status' }),
+    getUpdate: async () => update,
+    checkUpdate: async () => update,
+    installUpdate: async () => ({ ok: false, message: '미리보기에서는 적용되지 않아요' }),
+    onUpdate: (f) => { listeners.update.push(f); return () => {}; },
     hideWindow: async () => {},
     quit: async () => {},
     openExternal: async () => {},
@@ -71,6 +77,11 @@
     onSettings: (f) => { listeners.settings.push(f); return () => {}; },
     platform: 'win32'
   };
+
+  // 데모: 새 버전 알림 UI 확인용
+  if (params.get('demo') === 'update') {
+    update = { status: 'ready', version: '1.0.2', percent: 100, message: '새 버전 준비 완료 — 재시작하면 적용돼요' };
+  }
 
   // 데모: 주기적으로 상태를 바꿔 캐릭터가 움직이는 모습을 보여준다
   if (params.get('demo') === 'live') {
