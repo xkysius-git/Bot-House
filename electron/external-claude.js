@@ -98,4 +98,4 @@ class ExternalClaudeWatcher {
   }
 }
 
-module.exports = { ExternalClaudeWatcher };
+module.exports = { ExternalClaudeWatcher, listChannelProcesses, latestTranscriptMtime };

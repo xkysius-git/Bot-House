@@ -245,6 +245,15 @@ function send(channel, payload) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
 }
 
+// 창을 닫은 직후에는 외부 세션 감지 결과가 15초 늦게 갱신되므로 바로 한 번 다시 확인한다
+function refreshExternal() {
+  if (!externalClaude) return;
+  externalClaude.scan().then(() => {
+    send('claude', claudeSnapshot());
+    pushBots(true);
+  }).catch(() => {});
+}
+
 /* --------------------------------------------------------------- 기기 창 (작은 기기 ↔ 펼친 기기)
  * renderer가 기기 크기(논리 px)를 device.configure로 알려주고, device.setMode로 접기/펼치기.
  * 창은 가운데를 기준으로 좌우로 늘어나고 줄어든다. 배율(deviceScale)은 창 크기와 화면 확대율에 같이 곱한다.
@@ -438,7 +447,7 @@ function buildTrayMenu() {
     },
     { type: 'separator' },
     { label: 'Claude 채널 재연결', click: () => { manager.restart(); showWindow(); } },
-    { label: 'Claude 채널 멈추기', click: () => manager.stop(true) },
+    { label: 'Claude 채널 멈추기', click: () => { manager.stop(true); refreshExternal(); } },
     { type: 'separator' },
     { label: '종료', click: () => { quitting = true; app.quit(); } }
   ]);
@@ -614,6 +623,7 @@ function registerIpc() {
   });
   ipcMain.handle('claude:stop', async () => {
     manager.stop(true);
+    refreshExternal();
     return claudeSnapshot();
   });
   ipcMain.handle('claude:start', async () => {
