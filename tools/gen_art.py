@@ -480,20 +480,19 @@ from sprites import build as build_sprite
 # 원본 레퍼런스: docs/characters/*.jpg (2026-11-23 장현 님 제공)
 CHARS = {
     "oiji": dict(kind="oiji", pal=dict(
-        tones=["#5CDE83", "#2EC25B", "#17913F"], line="#0C6B2E", eye="#241a2e", spec="#C8F7D6")),
+        tones=["#7BE98F", "#3FCB63", "#1F9E45"], line="#15733A", eye="#241a2e",
+        spec="#D6FFDF", leaf="#2FA855", leaf_hi="#86E89B")),
     "takuan": dict(kind="takuan", pal=dict(
-        tones=["#F7EDD6", "#EFE1C5", "#D9C5A2"], line="#C0A782", eye="#241a2e",
-        rim="#E0CFAE", plate="#F8EFDC", blush="#F2A7AE", spec="#FFFFFF")),
+        tones=["#FFF6E4", "#F4E7C9", "#DCC7A2"], line="#B79A72", eye="#2A2233",
+        rim="#E4D2B0", plate="#F8EFDA", plate_hi="#FFFAEE", blush="#F5A6AE",
+        spec="#FFFFFF", feet="#E3D0AC")),
     "sbji": dict(kind="sbji", pal=dict(
         eye="#241a2e",
-        purple=dict(tones=["#9C6BF0", "#7C3FE3", "#5B24B4"], line="#46188C",
-                    spec="#C9A8FF", spec_at=((16, 9),)),
-        pink=dict(tones=["#FF63BD", "#F32AA0", "#C10C7A"], line="#990761",
-                  spec="#FFC0E4", spec_at=((8, 15),)),
-        orange=dict(tones=["#FFB067", "#FF8F3A", "#E3670F"], line="#B94E06",
-                    spec="#FFD3A6", spec_at=((17, 23),)))),
+        purple=dict(tones=["#B08BFF", "#8250E8", "#5C2FB2"], line="#46208C", spec="#E2D2FF"),
+        pink=dict(tones=["#FF8DCB", "#F44CA6", "#C2147C"], line="#96125F", spec="#FFD3EC"),
+        orange=dict(tones=["#FFC089", "#FF9445", "#E0631A"], line="#A94E0C", spec="#FFE0BF"))),
     "claude": dict(kind="clawd", pal=dict(
-        tones=["#E99072", "#D77757", "#B45940"], line="#7C3B27", eye="#241318", spec="#F3B49C")),
+        tones=["#EE9E80", "#D77757", "#B4563C"], line="#7A3A26", eye="#241a2e", spec="#F7C0A8")),
 }
 
 if __name__ == "__main__":
@@ -520,11 +519,11 @@ if __name__ == "__main__":
     # 액정 속 잔디와 봇 두 마리
     di.rectangle([114, 296, 398, 374], fill="#2f2a55")
     di.rectangle([114, 296, 398, 302], fill="#3d3768")
-    k = 4
+    k = 5
     spr_o = build_sprite(CHARS["oiji"]["kind"], CHARS["oiji"]["pal"]).crop((0, 0, S, S)).resize((S * k, S * k), Image.NEAREST)
     spr_c = build_sprite(CHARS["claude"]["kind"], CHARS["claude"]["pal"]).crop((0, 0, S, S)).resize((S * k, S * k), Image.NEAREST)
-    icon.paste(spr_o, (150, 348 - 30 * k), spr_o)
-    icon.paste(spr_c, (250, 348 - 30 * k), spr_c)
+    icon.paste(spr_o, (112, 352 - 30 * k), spr_o)
+    icon.paste(spr_c, (232, 352 - 30 * k), spr_c)
     # 물리 버튼 A · B · C
     for i, col in enumerate(("#ff8f6b", "#ffd166", "#7bd1a8")):
         cx = 176 + i * 80

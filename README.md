@@ -4,7 +4,7 @@
 
 ![tamagotchi](docs/tamagotchi.png)
 
-캐릭터는 `docs/characters/`의 원본을 기준으로 그립니다 — 오이지(풀색 네잎), 단무지(크림색 쿠션), 석박지(보라·핑크·오렌지 세 블록), 클로드(테라코타색 Clawd). 공통 규칙은 입·코 없이 세로로 긴 검은 눈 두 개와 오른쪽 위 흰 하이라이트입니다.
+캐릭터는 `docs/characters/`의 원본을 기준으로, v1.0.1의 아담한 SD 비율(몸통 19~22px, 위쪽 여백)로 다시 그립니다 — 오이지(풀색 네잎 쿠션 + 새싹), 단무지(크림 모찌 쿠션 + 볼터치), 석박지(보라·핑크·오렌지가 동글게 맞물린 3색 몸), 클로드(테라코타색 Clawd). 공통 규칙은 입·코 없이 세로로 긴 검은 눈 두 개와 오른쪽 위 흰 반짝 하이라이트입니다.
 
 ![characters](docs/characters/pixel-sheet.png)
 
@@ -91,7 +91,7 @@ npm start          # 전자 실행
 npm run dist       # Windows 설치본 + 포터블 빌드 (dist/)
 ```
 
-픽셀 아트는 `tools/gen_art.py`(배경·스프라이트)와 `tools/sprites.py`(캐릭터)로 생성합니다. 결과물은 `assets/`에 커밋되어 있습니다. 클로드(Clawd) 캐릭터는 `sprites.py`의 `build_clawd()`가 그립니다 — 넓은 직사각형 몸통, 양옆 짧은 팔, 네모 눈, 네 개의 짧은 다리.
+픽셀 아트는 `tools/gen_art.py`(배경·스프라이트)와 `tools/sprites.py`(캐릭터)로 생성합니다. 결과물은 `assets/`에 커밋되어 있습니다. 캐릭터는 `sprites.py`의 `build()`가 11프레임(숨쉬기 2 · 걷기 4 · 작업 4 · 잠 1)으로 그리고, 클로드(Clawd)는 `mask_clawd()`가 통통한 가로 몸통 + 짧은 팔 두 개 + 다리 네 개로 만듭니다.
 
 UI만 빠르게 확인하려면 `renderer/index.html`을 브라우저로 열면 됩니다(가짜 상태로 동작하는 미리보기 모드). `?demo=update`를 붙이면 업데이트 알림 모양을 볼 수 있습니다.
 
