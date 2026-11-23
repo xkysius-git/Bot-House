@@ -73,6 +73,7 @@
     }
   },
   "dependencies": {
-    "electron-updater": "^6.8.11"
+    "electron-updater": "^6.8.11",
+    "telegram": "^2.26.22"
   }
 }

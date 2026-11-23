@@ -38,5 +38,19 @@ contextBridge.exposeInMainWorld('botHouse', {
   onSettings: (handler) => on('settings', handler),
   onUsage: (handler) => on('usage', handler),
   onUpdate: (handler) => on('update', handler),
+  // 앱 안 채팅 (텔레그램 그룹) — docs/CHAT.md 참고
+  chat: {
+    status: () => ipcRenderer.invoke('chat:status'),
+    connect: () => ipcRenderer.invoke('chat:connect'),
+    sendCode: (phone) => ipcRenderer.invoke('chat:sendCode', phone),
+    submitCode: (code) => ipcRenderer.invoke('chat:submitCode', code),
+    submitPassword: (password) => ipcRenderer.invoke('chat:submitPassword', password),
+    logout: () => ipcRenderer.invoke('chat:logout'),
+    history: (opts) => ipcRenderer.invoke('chat:history', opts),
+    send: (payload) => ipcRenderer.invoke('chat:send', payload),
+    onStatus: (handler) => on('chat:status', handler),
+    onMessage: (handler) => on('chat:message', handler),
+    onEdited: (handler) => on('chat:edited', handler)
+  },
   platform: process.platform
 });

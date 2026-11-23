@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, Tray, Menu, ipcMain, dialog, nativeImage, shell } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, dialog, nativeImage, shell, safeStorage } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -11,6 +11,7 @@ const { StatusServer } = require('./status-server');
 const { BOTS, initialBotState, isBot } = require('./bots');
 const { UsageMonitor } = require('./usage');
 const { ExternalClaudeWatcher } = require('./external-claude');
+const { TelegramChat } = require('./chat-telegram');
 
 const ROOT = path.join(__dirname, '..');
 const WORKING_WINDOW_MS = 25000;   // 최근 25초 안에 활동이 있으면 '작업 중'
@@ -27,6 +28,7 @@ let statusServer = null;
 let statusPollTimer = null;
 let usageMonitor = null;
 let externalClaude = null;
+let chat = null;
 let quitting = false;
 let lastBotsPush = 0;
 
@@ -428,9 +430,22 @@ function registerIpc() {
       clearInterval(statusPollTimer);
       statusPollTimer = setInterval(pollStatusUrl, 15000);
     }
+    if (['tgApiId', 'tgApiHash', 'chatId'].some((k) => before[k] !== after[k])) {
+      chat.connect().catch(() => {});
+    }
     send('settings', after);
     return after;
   });
+
+  // 앱 안 채팅 (텔레그램 그룹)
+  ipcMain.handle('chat:status', () => chat.snapshot());
+  ipcMain.handle('chat:connect', () => chat.connect());
+  ipcMain.handle('chat:sendCode', (_e, phone) => chat.sendCode(phone));
+  ipcMain.handle('chat:submitCode', (_e, code) => chat.submitCode(code));
+  ipcMain.handle('chat:submitPassword', (_e, password) => chat.submitPassword(password));
+  ipcMain.handle('chat:logout', () => chat.logout());
+  ipcMain.handle('chat:history', (_e, opts) => chat.history(opts || {}));
+  ipcMain.handle('chat:send', (_e, payload) => chat.send(payload || {}));
 
   ipcMain.handle('settings:pickDir', async () => {
     const result = await dialog.showOpenDialog(win, {
@@ -523,6 +538,12 @@ if (!gotLock) {
 
     if (store.get('statusApiEnabled')) statusServer.start();
 
+    chat = new TelegramChat({ store, userDataDir: app.getPath('userData'), safeStorage });
+    chat.on('status', (snap) => send('chat:status', snap));
+    chat.on('message', (msg) => send('chat:message', msg));
+    chat.on('edited', (msg) => send('chat:edited', msg));
+    chat.on('log', (line) => manager.log(line, 'warn'));
+
     manager.on('log', (entry) => send('log', entry));
     manager.on('state', () => {
       send('claude', claudeSnapshot());
@@ -547,6 +568,9 @@ if (!gotLock) {
     }, 60000);
     statusPollTimer = setInterval(pollStatusUrl, 15000);
 
+    // 저장된 로그인이 있으면 채팅 자동 연결 (없으면 설정 필요/로그인 필요 상태로만 둔다)
+    setTimeout(() => chat.connect().catch(() => {}), 1500);
+
     externalClaude = new ExternalClaudeWatcher({ onChange: () => { send("claude", claudeSnapshot()); pushBots(true); } });
     externalClaude.start();
 
@@ -568,6 +592,7 @@ if (!gotLock) {
     try { manager.dispose(); } catch (_) { /* noop */ }
     try { statusServer.stop(); } catch (_) { /* noop */ }
     try { if (externalClaude) externalClaude.stop(); } catch (_) { /* noop */ }
+    try { if (chat) chat.disconnect(true); } catch (_) { /* noop */ }
     clearInterval(statusPollTimer);
   });
 
