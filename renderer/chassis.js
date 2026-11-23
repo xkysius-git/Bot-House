@@ -176,6 +176,12 @@
     el('stop', { offset: '55%', class: 'cs-h2' }, hg);
     el('stop', { offset: '100%', class: 'cs-h3' }, hg);
 
+    // 옆벽 재질 (두께)
+    const wg2 = el('linearGradient', { id: 'csWall', x1: '18%', y1: '0%', x2: '72%', y2: '100%' }, defs);
+    el('stop', { offset: '0%', class: 'cs-w1' }, wg2);
+    el('stop', { offset: '46%', class: 'cs-w2' }, wg2);
+    el('stop', { offset: '100%', class: 'cs-w3' }, wg2);
+
     // 3D 베벨 (모서리 챔퍼: 좌상단 하이라이트 → 우하단 음영)
     const bev = el('linearGradient', { id: 'csBevel', x1: '8%', y1: '0%', x2: '78%', y2: '100%' }, defs);
     el('stop', { offset: '0%', class: 'cs-bv1' }, bev);
@@ -214,8 +220,12 @@
     // 그림자 (실루엣을 따라 퍼지는 소프트 섀도)
     el('path', { d: body, class: 'cs-shadow' }, base);
 
-    // 몸통
-    el('path', { d: body, class: 'cs-body' }, base);
+    // 몸통 옆벽(두께) + 앞면(한 겹 안쪽) = 입체 성형 셸
+    el('path', { d: body, class: 'cs-wall' }, base);
+    el('path', { d: body, class: 'cs-outer-edge' }, base);
+    const face = el('g', { transform: `translate(${w2} ${cy}) scale(.942) translate(${-w2} ${-cy})` }, base);
+    el('path', { d: body, class: 'cs-body' }, face);
+    el('path', { d: body, class: 'cs-face-edge' }, face);
 
     // 3D 베벨: 안쪽으로 한 겹 들어간 챔퍼 면
     const bevG = el('g', { transform: `translate(${w2} ${cy}) scale(.972) translate(${-w2} ${-cy})` }, base);
@@ -226,7 +236,9 @@
     // 몸통 안쪽 하이라이트/음영
     const g1 = el('g', { 'clip-path': 'url(#csClip)' }, base);
     el('path', { d: body, class: 'cs-rimlight' }, g1);
-    el('ellipse', { cx: w2 - W * 0.06, cy: cy - 150, rx: W * 0.3, ry: 96, class: 'cs-gloss' }, g1);
+    el('ellipse', { cx: w2 - W * 0.07, cy: cy - 152, rx: W * 0.31, ry: 92, class: 'cs-gloss' }, g1);
+    el('ellipse', { cx: w2 - W * 0.12, cy: cy - 108, rx: W * 0.21, ry: 26, class: 'cs-spec' }, g1);
+    el('ellipse', { cx: w2 + W * 0.16, cy: cy - 92, rx: W * 0.12, ry: 16, class: 'cs-spec soft' }, g1);
     el('ellipse', { cx: w2, cy: cy + 176, rx: W * 0.38, ry: 70, class: 'cs-shade' }, g1);
     el('ellipse', { cx: w2, cy: cy + 8, rx: 168, ry: 150, class: 'cs-seat-shadow' }, g1);
 
