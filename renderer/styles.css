@@ -38,6 +38,15 @@ body.theme-night {
   --bezel-e: #93a6be;
   --bezel-line: rgba(255, 255, 255, .26);
   --bezel-ink: rgba(12, 20, 34, .55);
+  --cs-edge: rgba(0, 0, 0, .5);
+  --cs-rim: rgba(255, 255, 255, .3);
+  --cs-seat: rgba(0, 0, 0, .38);
+  --cs-tab-ed: rgba(0, 0, 0, .42);
+  --cs-antenna: #191c22;
+  --tab-hi: #3b4c6b;
+  --tab: #22304b;
+  --tab-lo: #101a2c;
+  --pad-lo: #100c22;
   --crown-ink: #eef4ff;
   --crown-muted: #93a8c6;
   --key: #2c254e;
@@ -88,6 +97,15 @@ body.theme-day {
   --bezel-e: #a5d7ee;
   --bezel-line: rgba(255, 255, 255, .5);
   --bezel-ink: rgba(20, 50, 75, .35);
+  --cs-edge: rgba(40, 70, 100, .45);
+  --cs-rim: rgba(255, 255, 255, .8);
+  --cs-seat: rgba(120, 160, 190, .35);
+  --cs-tab-ed: rgba(60, 100, 135, .35);
+  --cs-antenna: #1d2530;
+  --tab-hi: #ffffff;
+  --tab: #e8f2fa;
+  --tab-lo: #c2d6e6;
+  --pad-lo: #b9cade;
   --crown-ink: #22304a;
   --crown-muted: #6f86a4;
   --key: #22304a;
@@ -143,15 +161,15 @@ button { font-family: inherit; cursor: pointer; }
 [hidden] { display: none !important; }
 
 /* ================================================================
-   스테이지 · 기기 본체 — 디지바이스
+   스테이지 · 진짜 디지바이스 실루엣 (SVG 베지어)
    ================================================================ */
 .stage {
   height: 100vh;
   width: 100%;
-  padding: 22px 6px 10px;
   display: flex;
   align-items: stretch;
   justify-content: center;
+  overflow: hidden;
 }
 
 .device {
@@ -160,411 +178,46 @@ button { font-family: inherit; cursor: pointer; }
   height: 100%;
   min-width: 0;
   min-height: 0;
-  display: flex;
-  filter: drop-shadow(0 18px 26px rgba(0, 0, 0, .45));
+  -webkit-app-region: drag;
+  isolation: isolate;
 }
 
-/* 안테나 */
-.antenna {
-  position: absolute;
-  left: 74px;
-  top: -15px;
-  width: 9px;
-  height: 30px;
-  border-radius: 5px 5px 3px 3px;
-  background: linear-gradient(90deg, #2c3340, #6d7686 45%, #222834);
-  transform: rotate(-16deg);
-  transform-origin: bottom center;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .5);
-  z-index: 0;
-}
-.antenna-tip {
-  position: absolute;
-  left: 1px;
-  top: -4px;
-  width: 8px;
-  height: 9px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, var(--metal-hi), var(--metal-lo));
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .3);
-}
-
-/* 셸 */
-.shell {
-  position: relative;
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  padding: 0 8px;
-  border-radius: 46px 46px 40px 40px;
-  border: 1px solid var(--shell-line);
-  background:
-    linear-gradient(178deg, var(--shell-hi) 0%, var(--shell) 16%, var(--shell) 62%, var(--shell-lo) 100%);
-  box-shadow:
-    inset 0 3px 0 var(--rim),
-    inset 0 -12px 24px rgba(0, 0, 0, .28),
-    inset 0 0 0 1px rgba(255, 255, 255, .06),
-    0 2px 6px rgba(0, 0, 0, .4);
-  overflow: hidden;
-}
-
-/* 표면 입자 */
-.shell-grain {
+.chassis {
   position: absolute;
   inset: 0;
-  pointer-events: none;
-  background-image:
-    radial-gradient(var(--shell-grain) 1px, transparent 1px),
-    radial-gradient(var(--shell-grain) 1px, transparent 1px);
-  background-size: 3px 3px, 5px 5px;
-  background-position: 0 0, 2px 2px;
-  opacity: .8;
-}
-
-/* 상단: 브랜드 + 창 버튼 (드래그) */
-.crown {
-  position: relative;
-  z-index: 3;
-  flex: 0 0 26px;
-  height: 26px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 0 10px 0 14px;
-  -webkit-app-region: drag;
-}
-
-.crown-brand { display: flex; align-items: center; gap: 7px; min-width: 0; }
-
-.crown-led {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 2px rgba(255, 122, 89, .18), 0 0 8px rgba(255, 122, 89, .5);
-  flex: 0 0 auto;
-}
-.crown-led.off { background: var(--muted); box-shadow: none; }
-
-.crown-name {
-  font-family: var(--font-pixel);
-  font-size: 7px;
-  letter-spacing: .1em;
-  color: var(--crown-ink);
-  white-space: nowrap;
-}
-
-.crown-model {
-  font-size: 6.5px;
-  letter-spacing: .16em;
-  color: var(--crown-muted);
-  white-space: nowrap;
-}
-
-.crown-actions { display: flex; gap: 5px; -webkit-app-region: no-drag; }
-
-.win-btn {
-  width: 17px; height: 17px;
-  border-radius: 50%;
-  border: 1px solid var(--key-line);
-  background: linear-gradient(180deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, .04));
-  color: var(--crown-ink);
-  font-size: 11px;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28);
-}
-.win-btn:hover { filter: brightness(1.15); }
-.win-btn:active { transform: translateY(1px); }
-.win-btn.close:hover { background: linear-gradient(180deg, #ff9d88, #e2513a); color: #2a0c05; }
-
-/* 상·하단 홈 요철 2줄 */
-.groove {
-  position: relative;
-  z-index: 1;
-  flex: 0 0 7px;
-  height: 7px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-evenly;
-  padding: 0 22px;
-  pointer-events: none;
-}
-.groove i {
-  display: block;
-  height: 2px;
-  border-radius: 2px;
-  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, .38) 12%, rgba(0, 0, 0, .38) 88%, transparent);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, .14);
-}
-
-/* 본문: 왼쪽 그립 · 액정 · 오른쪽 그립 */
-.device-body {
-  position: relative;
-  z-index: 2;
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-}
-
-/* ---------------- 그립 포드 ---------------- */
-.grip {
-  flex: 0 0 var(--pod);
-  width: var(--pod);
+  width: 100%;
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 14px 5px;
-  position: relative;
-}
-
-.grip-ribs {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  opacity: .75;
-  pointer-events: none;
-}
-.grip-ribs i {
   display: block;
-  width: 62px;
-  height: 5px;
-  border-radius: 3px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, .2), rgba(0, 0, 0, .35));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 1px 0 rgba(255, 255, 255, .1);
-}
-
-/* ---------------- D-패드 (원형 4방향) ---------------- */
-.dpad {
-  position: relative;
-  width: 100px;
-  height: 100px;
-  flex: 0 0 100px;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 50% 42%, var(--pad-hi), var(--pad) 62%, var(--key-lo) 100%);
-  border: 1px solid var(--key-line-strong);
-  box-shadow:
-    inset 0 2px 0 rgba(255, 255, 255, .24),
-    inset 0 -6px 12px rgba(0, 0, 0, .4),
-    0 4px 9px rgba(0, 0, 0, .35);
-}
-
-.dbtn {
-  position: absolute;
-  border: 1px solid var(--key-line-strong);
-  background: linear-gradient(180deg, var(--key-hi), var(--key-lo));
-  color: var(--key-ink);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 2px 0 var(--key-shadow);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  transition: transform .07s ease, box-shadow .07s ease;
-}
-.dbtn:hover { filter: brightness(1.12); }
-.dbtn:active { transform: translateY(2px); box-shadow: inset 0 2px 5px rgba(0, 0, 0, .45); }
-
-.dbtn.up { left: 33px; top: 3px; }
-.dbtn.down { left: 33px; bottom: 3px; }
-.dbtn.left { left: 3px; top: 33px; }
-.dbtn.right { right: 3px; top: 33px; }
-
-.dbtn.mid {
-  left: 34px; top: 34px;
-  width: 32px; height: 32px;
   pointer-events: none;
-  border-radius: 50%;
-  background: radial-gradient(circle at 40% 30%, var(--pad-hi), var(--pad));
-  font-size: 12px;
-  color: var(--key-ink);
-  opacity: .85;
+  overflow: visible;
 }
+.chassis.base { z-index: 1; }
+.chassis.ring { z-index: 5; }
 
-.dbtn i {
-  width: 0; height: 0;
-  border: 4px solid transparent;
-  display: block;
-}
-.dbtn.up i { border-bottom-color: var(--key-ink); margin-top: -3px; }
-.dbtn.down i { border-top-color: var(--key-ink); margin-bottom: -3px; }
-.dbtn.left i { border-right-color: var(--key-ink); margin-left: -3px; }
-.dbtn.right i { border-left-color: var(--key-ink); margin-right: -3px; }
-
-/* ---------------- 낮/밤 슬라이드 스위치 ---------------- */
-.rail-switch {
-  border: 0;
-  background: transparent;
-  color: var(--crown-muted);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0;
-}
-.rail-track {
-  width: 34px;
-  height: 16px;
-  border-radius: 99px;
-  background: linear-gradient(180deg, var(--key-lo), var(--pad));
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, .5), inset 0 -1px 0 rgba(255, 255, 255, .16);
-  position: relative;
-  display: block;
-}
-.rail-knob {
+/* ---------------- 액정: 링 구멍의 기하학적 정중앙 ---------------- */
+.screen {
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: linear-gradient(180deg, #ffd9a8, #ff9d5c);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .6);
-  transition: left .18s ease, background .18s ease;
-}
-body.theme-day .rail-knob { left: 20px; background: linear-gradient(180deg, #fff4d6, #ffc94d); }
-.rail-label { font-size: 8px; letter-spacing: .1em; }
-
-/* ---------------- A · B · C 버튼 ---------------- */
-.ab-pad {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 9px;
-}
-
-.ab-key {
-  border-radius: 50%;
-  border: 1px solid var(--key-line-strong);
-  background: radial-gradient(circle at 38% 28%, var(--key-hi), var(--key-lo) 78%);
-  color: var(--key-ink);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1px;
-  padding: 0;
-  box-shadow:
-    inset 0 2px 0 rgba(255, 255, 255, .3),
-    0 3px 0 var(--key-shadow),
-    0 6px 10px rgba(0, 0, 0, .22);
-  transition: transform .07s ease, box-shadow .07s ease;
-}
-.ab-key b { font-family: var(--font-pixel); font-size: 8px; letter-spacing: .04em; }
-.ab-key span { font-size: 7.5px; color: var(--key-ink); opacity: .72; }
-.ab-key:hover { filter: brightness(1.1); }
-.ab-key:active, .ab-key.pressed {
-  transform: translateY(3px);
-  box-shadow: inset 0 3px 6px rgba(0, 0, 0, .4), 0 1px 0 rgba(0, 0, 0, .2);
-}
-
-.ab-key.a { width: 58px; height: 58px; background: radial-gradient(circle at 38% 28%, #ffc0a8, #ff7a59 76%); color: #3a130a; }
-.ab-key.a span { color: #4d1c10; opacity: .85; }
-.ab-row { display: flex; gap: 8px; }
-.ab-key.b, .ab-key.c { width: 44px; height: 44px; }
-
-/* ---------------- 액정 베젤 (링) ---------------- */
-.visor {
-  position: relative;
-  flex: 1 1 auto;
-  min-width: 0;
-  height: var(--ring);
-  max-height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.seam {
-  position: absolute;
-  top: 18%;
-  bottom: 18%;
-  width: 2px;
-  border-radius: 2px;
-  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, .45) 22%, rgba(0, 0, 0, .45) 78%, transparent);
-  box-shadow: 1px 0 0 rgba(255, 255, 255, .16);
-  pointer-events: none;
+  left: 50%;
+  top: 50%;
+  width: var(--lcd-w, 260px);
+  height: var(--lcd-h, 254px);
+  transform: translate(-50%, -50%);
   z-index: 3;
 }
-.seam.l { left: -1px; }
-.seam.r { right: -1px; }
 
-.bezel {
-  position: relative;
-  width: var(--ring);
-  height: var(--ring);
-  flex: 0 0 auto;
-  padding: 32px;
-  border-radius: 100px;
-  background:
-    linear-gradient(166deg, var(--bezel-a) 0%, var(--bezel-b) 7%, var(--bezel-c) 34%, var(--bezel-d) 62%, var(--bezel-e) 90%, var(--bezel-a) 100%);
-  box-shadow:
-    inset 0 2px 0 rgba(255, 255, 255, .55),
-    inset 0 -4px 10px rgba(0, 0, 0, .35),
-    0 0 0 1px rgba(0, 0, 0, .3),
-    0 6px 16px rgba(0, 0, 0, .4);
-}
-
-/* 링 각인(점선) + 안쪽 그림자 */
-.bezel-tick {
-  position: absolute;
-  inset: 9px;
-  border-radius: 94px;
-  border: 1px dashed var(--bezel-ink);
-  opacity: .55;
-  pointer-events: none;
-  z-index: 3;
-}
-.bezel::before {
-  content: '';
-  position: absolute;
-  inset: 21px;
-  border-radius: 82px;
-  background: linear-gradient(180deg, rgba(10, 16, 28, .33), rgba(10, 16, 28, .12));
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, .5), 0 1px 0 rgba(255, 255, 255, .3);
-  pointer-events: none;
-  z-index: 1;
-}
-.bezel::after {
-  content: '';
-  position: absolute;
-  inset: 27px;
-  border-radius: 76px;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .3), inset 0 3px 8px rgba(0, 0, 0, .45);
-  pointer-events: none;
-}
-
-/* 정사각 액정 */
 .lcd {
   position: relative;
+  width: 100%;
   height: 100%;
-  width: auto;
-  aspect-ratio: 1 / 1;
-  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  border-radius: 22px;
+  border-radius: 12px;
   overflow: hidden;
   background: var(--lcd-bg);
   box-shadow:
     inset 0 0 0 2px rgba(0, 0, 0, .45),
-    inset 0 8px 26px rgba(0, 0, 0, .4),
-    0 0 0 1px rgba(255, 255, 255, .06);
+    inset 0 9px 26px rgba(0, 0, 0, .38);
   isolation: isolate;
-  z-index: 2;
 }
 
 .lcd-glass {
@@ -572,7 +225,7 @@ body.theme-day .rail-knob { left: 20px; background: linear-gradient(180deg, #fff
   inset: 0;
   pointer-events: none;
   z-index: 9;
-  border-radius: 22px;
+  border-radius: 12px;
   background-image:
     radial-gradient(rgba(0, 0, 0, .10) 1px, transparent 1px),
     linear-gradient(176deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, 0) 30%);
@@ -583,11 +236,273 @@ body.theme-day .lcd-glass {
   background-image: radial-gradient(rgba(80, 60, 40, .07) 1px, transparent 1px), linear-gradient(176deg, rgba(255, 255, 255, .5), rgba(255, 255, 255, 0) 34%);
 }
 
-/* ------- B모드: 가로 와이드 변신 ------- */
-html[data-win="wide"] .bezel { width: 100%; border-radius: 100px; }
-html[data-win="wide"] .lcd { width: 100%; aspect-ratio: auto; }
+/* ---------------- 섀시 페인트 ---------------- */
+.cs-shadow { fill: rgba(0, 0, 0, .5); filter: blur(15px); transform: translateY(11px); }
+.cs-bevel { fill: none; stroke: url(#csBevel); stroke-width: 16; }
+.cs-bevel2 { fill: none; stroke: rgba(255, 255, 255, .07); stroke-width: 4; }
+.cs-bv1 { stop-color: rgba(255, 255, 255, .62); }
+.cs-bv2 { stop-color: rgba(255, 255, 255, .16); }
+.cs-bv3 { stop-color: rgba(0, 0, 0, .16); }
+.cs-bv4 { stop-color: rgba(0, 0, 0, .45); }
+.cs-seat-shadow { fill: rgba(0, 0, 0, .42); filter: blur(20px); }
+.cs-antenna-collar { stroke: rgba(255, 255, 255, .28); stroke-width: 2; }
+.cs-body { fill: url(#csBody); stroke: var(--cs-edge); stroke-width: 1.3; }
+.cs-rimlight { fill: none; stroke: var(--cs-rim); stroke-width: 3; opacity: .65; }
+.cs-gloss { fill: url(#csGloss); opacity: .72; }
+.cs-shade { fill: rgba(0, 0, 0, .3); filter: blur(16px); }
+.cs-tab { fill: url(#csTab); stroke: var(--cs-edge); stroke-width: 1.1; }
+.cs-tab-line { fill: none; stroke: var(--cs-tab-ed); stroke-width: 3; opacity: .55; }
+.cs-boss { fill: url(#csBoss); stroke: var(--cs-edge); stroke-width: 1.2; }
+.cs-boss-rim { fill: none; stroke: var(--cs-rim); stroke-width: 2; opacity: .55; }
+.cs-well { fill: rgba(0, 0, 0, .26); }
+.cs-ringseat { fill: none; stroke: var(--cs-seat); stroke-width: 7; opacity: .85; }
+.cs-antenna { fill: var(--cs-antenna); stroke: rgba(0, 0, 0, .55); stroke-width: 1; }
+.cs-antenna-ridge { stroke: rgba(255, 255, 255, .22); stroke-width: 1.2; }
+.cs-antenna-tip { fill: #3a4354; stroke: rgba(0, 0, 0, .6); stroke-width: 1; }
+.cs-seam { stroke: none; }
 
-/* "치킹!" 연출 */
+/* 그라데이션 스톱 */
+.cs-b1 { stop-color: var(--shell-hi); }
+.cs-b2 { stop-color: var(--shell); }
+.cs-b3 { stop-color: var(--shell); }
+.cs-b4 { stop-color: var(--shell-lo); }
+.cs-t1 { stop-color: var(--tab-hi); }
+.cs-t2 { stop-color: var(--tab); }
+.cs-t3 { stop-color: var(--tab-lo); }
+.cs-s1 { stop-color: var(--pad-hi); }
+.cs-s2 { stop-color: var(--pad); }
+.cs-s3 { stop-color: var(--pad-lo); }
+.cs-g1 { stop-color: rgba(255, 255, 255, .55); }
+.cs-g2 { stop-color: rgba(255, 255, 255, .12); }
+.cs-g3 { stop-color: rgba(255, 255, 255, 0); }
+.cs-r1 { stop-color: var(--bezel-a); }
+.cs-r2 { stop-color: var(--bezel-b); }
+.cs-r3 { stop-color: var(--bezel-c); }
+.cs-r4 { stop-color: var(--bezel-d); }
+.cs-r5 { stop-color: var(--bezel-e); }
+.cs-h1 { stop-color: rgba(255, 255, 255, .28); }
+.cs-h2 { stop-color: rgba(255, 255, 255, .04); }
+.cs-h3 { stop-color: rgba(0, 0, 0, .16); }
+.cs-i1 { stop-color: rgba(0, 0, 0, .45); }
+.cs-i2 { stop-color: rgba(0, 0, 0, 0); }
+
+/* ---------------- 링 베젤 ---------------- */
+.cs-ring { fill: url(#csRingMetal); stroke: var(--cs-edge); stroke-width: 1.2; }
+.cs-ring-sheen { fill: none; stroke: rgba(255, 255, 255, .7); stroke-width: 10; opacity: .75; filter: blur(3px); }
+.cs-ring-inner { fill: none; stroke: rgba(0, 0, 0, .3); stroke-width: 6; opacity: .7; filter: blur(2px); }
+.cs-etch-dash { fill: none; stroke: var(--bezel-ink); stroke-width: 1.4; stroke-dasharray: 2 5.5; opacity: .55; }
+.cs-etch-line { fill: none; stroke: rgba(0, 0, 0, .35); stroke-width: 2.4; opacity: .5; }
+.cs-tick { stroke: var(--bezel-ink); stroke-width: .9; opacity: .5; }
+.cs-tick.long { stroke-width: 1.5; opacity: .72; }
+.cs-screw { fill: none; stroke: var(--bezel-ink); stroke-width: 1.1; opacity: .5; }
+.cs-screw-cut { stroke: var(--bezel-ink); stroke-width: 1.1; opacity: .5; }
+.cs-ring-lip { fill: none; stroke: rgba(0, 0, 0, .55); stroke-width: 5; filter: blur(2px); }
+.cs-ring-lip2 { fill: none; stroke: rgba(255, 255, 255, .28); stroke-width: 1.6; }
+
+/* ---------------- 브랜드 각인 ---------------- */
+.crown {
+  position: absolute;
+  left: 50%;
+  top: calc(50% - 170px);
+  transform: translateX(-50%);
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  pointer-events: none;
+}
+.crown-led {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px rgba(255, 122, 89, .16), 0 0 7px rgba(255, 122, 89, .55);
+  flex: 0 0 auto;
+}
+.crown-led.off { background: var(--muted); box-shadow: none; }
+.crown-name {
+  font-family: var(--font-pixel);
+  font-size: 6.5px;
+  letter-spacing: .14em;
+  color: var(--bezel-ink);
+  opacity: .9;
+  white-space: nowrap;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .35);
+}
+body.theme-night .crown-name { text-shadow: 0 1px 0 rgba(0, 0, 0, .5); }
+
+/* ---------------- 범퍼 블록 위의 스위치 · 창 버튼 ---------------- */
+.tabctl {
+  position: absolute;
+  top: 15px;
+  width: 86px;
+  height: 27px;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  -webkit-app-region: no-drag;
+}
+.tabctl.tl { left: calc(50% - 149px); }
+.tabctl.tr { left: calc(50% + 63px); }
+
+.win-btn {
+  width: 19px; height: 19px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, .35);
+  background: linear-gradient(180deg, var(--tab-hi), var(--tab-lo));
+  color: var(--key-ink);
+  font-size: 11px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 1px 2px rgba(0, 0, 0, .3);
+}
+.win-btn:hover { filter: brightness(1.15); }
+.win-btn:active { transform: translateY(1px); }
+.win-btn.close:hover { background: linear-gradient(180deg, #ff9d88, #e2513a); color: #2a0c05; }
+
+/* ---------------- 낮/밤 슬라이드 스위치 ---------------- */
+.rail-switch {
+  border: 0;
+  background: transparent;
+  color: var(--crown-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+}
+.rail-track {
+  width: 36px;
+  height: 15px;
+  border-radius: 99px;
+  background: linear-gradient(180deg, var(--key-lo), var(--pad));
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, .5), inset 0 -1px 0 rgba(255, 255, 255, .16);
+  position: relative;
+  display: block;
+}
+.rail-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #ffd9a8, #ff9d5c);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .6);
+  transition: left .18s ease, background .18s ease;
+}
+body.theme-day .rail-knob { left: 23px; background: linear-gradient(180deg, #fff4d6, #ffc94d); }
+.rail-label { font-size: 8px; letter-spacing: .1em; font-weight: 700; }
+
+/* ---------------- 윙 (좌우 귀) ---------------- */
+.wing {
+  position: absolute;
+  top: 50%;
+  z-index: 6;
+  -webkit-app-region: no-drag;
+  transition: transform .34s cubic-bezier(.3, .8, .3, 1);
+}
+.wing.left { left: 12px; transform: translateY(-50%); }
+.wing.right { right: 28px; transform: translateY(-50%); }
+html[data-win="wide"] .wing.left { transform: translate(-12px, -50%) rotate(-7deg); }
+html[data-win="wide"] .wing.right { transform: translate(12px, -50%) rotate(7deg); }
+
+/* 큰 원형 D-패드 (지름 128) */
+.dpad {
+  width: 128px;
+  height: 128px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 2px;
+  padding: 7px;
+}
+.dbtn {
+  border: 1px solid var(--key-line-strong);
+  background: linear-gradient(180deg, var(--key-hi), var(--key-lo));
+  color: var(--key-ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 2px 0 var(--key-shadow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  padding: 0;
+  transition: transform .07s ease, box-shadow .07s ease;
+}
+.dbtn:hover { filter: brightness(1.12); }
+.dbtn:active { transform: translateY(2px); box-shadow: inset 0 2px 5px rgba(0, 0, 0, .45); }
+.dbtn.up { grid-area: 1 / 2; }
+.dbtn.left { grid-area: 2 / 1; }
+.dbtn.right { grid-area: 2 / 3; }
+.dbtn.down { grid-area: 3 / 2; }
+.dbtn.mid {
+  grid-area: 2 / 2;
+  pointer-events: none;
+  border-radius: 9px;
+  background: radial-gradient(circle at 40% 30%, var(--pad-hi), var(--pad));
+  font-size: 13px;
+  color: var(--key-ink);
+  opacity: .9;
+}
+.dbtn i {
+  display: block;
+  width: 0; height: 0;
+  border: 5px solid transparent;
+}
+.dbtn.up i { border-bottom-color: var(--key-ink); margin-top: -4px; }
+.dbtn.down i { border-top-color: var(--key-ink); margin-bottom: -4px; }
+.dbtn.left i { border-right-color: var(--key-ink); margin-left: -4px; }
+.dbtn.right i { border-left-color: var(--key-ink); margin-right: -4px; }
+
+/* 큰 타원 A · B 버튼 + C */
+.ab-pad {
+  width: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.ab-key {
+  border: 1px solid var(--key-line-strong);
+  background: radial-gradient(circle at 36% 24%, var(--key-hi), var(--key-lo) 82%);
+  color: var(--key-ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 0;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, .3),
+    0 3px 0 var(--key-shadow),
+    0 7px 11px rgba(0, 0, 0, .26);
+  transition: transform .07s ease, box-shadow .07s ease;
+}
+.ab-key b { font-family: var(--font-pixel); font-size: 11px; letter-spacing: .04em; line-height: 1; }
+.ab-key span { font-size: 8.5px; color: var(--key-ink); opacity: .74; line-height: 1; }
+.ab-key:hover { filter: brightness(1.1); }
+.ab-key:active, .ab-key.pressed {
+  transform: translateY(3px);
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, .4), 0 1px 0 rgba(0, 0, 0, .2);
+}
+.ab-key.a {
+  width: 96px; height: 58px;
+  border-radius: 29px;
+  background: radial-gradient(circle at 34% 20%, #ffc9b2, #ff8a63 62%, #e2593a 100%);
+  color: #3a130a;
+}
+.ab-key.a b { font-size: 13px; }
+.ab-key.a span { color: #4d1c10; opacity: .9; }
+.ab-key.b { width: 96px; height: 58px; border-radius: 29px; }
+.ab-key.b b { font-size: 13px; }
+.ab-key.c { width: 60px; height: 60px; border-radius: 50%; }
+.ab-key.c b { font-size: 12px; }
+.ab-key.c span { font-size: 8px; }
+
+/* ---------------- "치킹!" 변신 연출 ---------------- */
 .morph-fx {
   position: absolute;
   inset: 0;
@@ -625,8 +540,7 @@ html[data-win="wide"] .lcd { width: 100%; aspect-ratio: auto; }
 #device.morph .morph-fx { animation: morphFlash .74s ease-out; }
 #device.morph .morph-fx b { visibility: visible; animation: morphText .74s cubic-bezier(.2, 1.5, .3, 1); }
 #device.morph .morph-fx .scan { visibility: visible; animation: morphScan .74s ease-out; }
-#device.morph .bezel { animation: morphJolt .74s ease-out; }
-#device.morph .seam { animation: seamGlow .74s ease-out; }
+#device.morph .chassis.ring { animation: morphJolt .74s ease-out; }
 
 @keyframes morphFlash {
   0% { opacity: 0; background: rgba(190, 245, 255, 0); }
@@ -653,41 +567,18 @@ html[data-win="wide"] .lcd { width: 100%; aspect-ratio: auto; }
   34% { filter: brightness(1.25); }
   100% { filter: brightness(1); }
 }
-@keyframes seamGlow {
-  0% { box-shadow: 1px 0 0 rgba(255, 255, 255, .16); }
-  15% { box-shadow: 0 0 10px 2px rgba(150, 235, 255, .95), 1px 0 0 rgba(255, 255, 255, .5); }
-  100% { box-shadow: 1px 0 0 rgba(255, 255, 255, .16); }
-}
-
-/* 하단 공기 구멍 */
-.shell-foot {
-  flex: 0 0 12px;
-  height: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  opacity: .55;
-}
-.shell-foot .vent { display: flex; gap: 3px; }
-.shell-foot .vent i { width: 3px; height: 3px; border-radius: 50%; background: var(--key-lo); box-shadow: inset 0 1px 0 rgba(0, 0, 0, .4); }
-.shell-foot .screw {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, .5), rgba(0, 0, 0, .45));
-}
 
 /* ================================================================
    액정 상단 바
    ================================================================ */
 .lcd-top {
   flex: 0 0 auto;
-  height: 28px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  padding: 0 9px 0 13px;
+  padding: 0 14px 0 22px;
   background: var(--lcd-top);
   border-bottom: 1px solid var(--lcd-line);
   position: relative;
@@ -877,14 +768,14 @@ body.theme-day .tama-glass { background-image: radial-gradient(rgba(80, 60, 40, 
 /* 미니 게이지 (3칸 가로 한 줄) */
 .tama-meters {
   position: absolute;
-  left: 7px;
-  right: 7px;
-  bottom: 6px;
+  left: 16px;
+  right: 16px;
+  bottom: 10px;
   z-index: 3;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 7px;
-  padding: 4px 7px;
+  gap: 9px;
+  padding: 5px 9px;
   border-radius: 8px;
   background: var(--lcd-panel);
   border: 1px solid var(--lcd-line);
@@ -896,7 +787,7 @@ body.theme-day .tama-glass { background-image: radial-gradient(rgba(80, 60, 40, 
   gap: 4px;
   min-width: 0;
 }
-.tama-meter .m-label { font-size: 7px; color: var(--lcd-muted); white-space: nowrap; flex: 0 0 auto; }
+.tama-meter .m-label { font-size: 7.5px; letter-spacing: .01em; color: var(--lcd-muted); white-space: nowrap; flex: 0 0 auto; }
 .tama-meter .m-val { display: none; }
 .tama-meter .m-track { flex: 1 1 auto; min-width: 0; }
 

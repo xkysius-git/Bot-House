@@ -505,7 +505,7 @@
 
     if (day) {
       // 해 — 도트 원 + 짧은 햇살
-      const sx = Math.round(state.view.lw - 44), sy = 27;
+      const sx = Math.round(state.view.lw * 0.53), sy = 34;
       sunArt().forEach((row, ry) => {
         for (let rx = 0; rx < row.length; rx += 1) {
           if (row[rx] === '#') px(ctx, sx - 4 + rx, sy - 4 + ry, 1, 1, '#ffd168');
@@ -544,7 +544,7 @@
         ctx.restore();
       }
       // 달
-      const mx = Math.round(state.view.lw - 50), my = 24;
+      const mx = Math.round(state.view.lw * 0.53) - 6, my = 30;
       ctx.save();
       for (let a = 0; a < 16; a += 1) {
         if (a % 2) continue;

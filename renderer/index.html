@@ -9,52 +9,12 @@
 <body class="theme-night">
   <div class="stage" id="stage">
     <div class="device" id="device">
-      <!-- 짧은 안테나 -->
-      <span class="antenna" aria-hidden="true"><i class="antenna-tip"></i></span>
+      <!-- 1) 진짜 디지바이스 실루엣 (SVG 베지어): 몸통·범퍼·윙·안테나·버튼 보스 -->
+      <svg class="chassis base" id="chassisBase" viewBox="0 0 580 450" aria-hidden="true"></svg>
 
-      <div class="shell" id="shell">
-        <span class="shell-grain" aria-hidden="true"></span>
-
-        <!-- 상단: 브랜드 + 창 버튼 (드래그 영역) -->
-        <div class="crown" id="crown">
-          <div class="crown-brand">
-            <span class="crown-led" id="shellLed" aria-hidden="true"></span>
-            <span class="crown-name">BOT HOUSE</span>
-            <span class="crown-model">CARE UNIT · 01</span>
-          </div>
-          <div class="crown-actions">
-            <button class="win-btn" id="winMin" type="button" title="트레이로 숨기기" aria-label="트레이로 숨기기">–</button>
-            <button class="win-btn close" id="winClose" type="button" title="앱 종료" aria-label="앱 종료">×</button>
-          </div>
-        </div>
-
-        <!-- 상단 홈 요철 2줄 -->
-        <div class="groove top" aria-hidden="true"><i></i><i></i></div>
-
-        <div class="device-body">
-          <!-- 왼쪽 그립: D-패드 + 낮/밤 스위치 -->
-          <div class="grip left">
-            <span class="grip-ribs top" aria-hidden="true"><i></i><i></i><i></i></span>
-            <div class="dpad" id="dpad">
-              <button class="dbtn up" type="button" data-key="UP" aria-label="이전 화면"><i></i></button>
-              <button class="dbtn left" type="button" data-key="LEFT" aria-label="이전 봇"><i></i></button>
-              <span class="dbtn mid emblem" aria-hidden="true">◈</span>
-              <button class="dbtn right" type="button" data-key="RIGHT" aria-label="다음 봇"><i></i></button>
-              <button class="dbtn down" type="button" data-key="DOWN" aria-label="다음 화면"><i></i></button>
-            </div>
-            <button class="rail-switch" id="themeBtn" type="button" title="낮/밤 전환">
-              <span class="rail-track"><span class="rail-knob" id="themeSwatch"></span></span>
-              <span class="rail-label" id="themeLabel">밤</span>
-            </button>
-            <span class="grip-ribs bottom" aria-hidden="true"><i></i><i></i><i></i></span>
-          </div>
-
-          <!-- 중앙: 링 베젤 + 정사각 액정 -->
-          <div class="visor">
-            <span class="seam l" aria-hidden="true"></span>
-            <div class="bezel" id="bezel">
-              <span class="bezel-tick" aria-hidden="true"></span>
-              <div class="lcd" id="lcdScreen">
+      <!-- 2) 액정 (링 구멍에 정확히 정중앙으로 놓인다) -->
+      <div class="screen" id="screenWrap">
+        <div class="lcd" id="lcdScreen">
                 <div class="lcd-top">
                   <div class="lcd-tabs" id="viewSwitch">
                     <button type="button" class="on" data-view="tamagotchi">홈</button>
@@ -239,30 +199,46 @@
 
                 <div class="lcd-glass" aria-hidden="true"></div>
               </div>
-            </div>
-            <span class="seam r" aria-hidden="true"></span>
-          </div>
-
-          <!-- 오른쪽 그립: A · B · C 버튼 -->
-          <div class="grip right">
-            <span class="grip-ribs top" aria-hidden="true"><i></i><i></i><i></i></span>
-            <div class="ab-pad">
-              <button class="ab-key a" type="button" data-key="A"><b>A</b><span>돌보기</span></button>
-              <div class="ab-row">
-                <button class="ab-key b" type="button" data-key="B"><b>B</b><span>모드</span></button>
-                <button class="ab-key c" type="button" data-key="C"><b>C</b><span>메뉴</span></button>
-              </div>
-            </div>
-            <span class="grip-ribs bottom" aria-hidden="true"><i></i><i></i><i></i></span>
-          </div>
         </div>
 
-        <!-- 하단 홈 요철 2줄 -->
-        <div class="groove bottom" aria-hidden="true"><i></i><i></i></div>
+      <!-- 3) 링 베젤 — 액정 위로 겹쳐지는 금속 링과 각인 -->
+      <svg class="chassis ring" id="chassisRing" viewBox="0 0 580 450" aria-hidden="true"></svg>
 
-        <div class="shell-foot" aria-hidden="true">
-          <span class="vent"><i></i><i></i><i></i><i></i></span>
-          <span class="screw"></span>
+      <!-- 4) 조작부 -->
+      <div class="crown" id="crown">
+        <span class="crown-led" id="shellLed" aria-hidden="true"></span>
+        <span class="crown-name">BOT HOUSE</span>
+      </div>
+
+      <div class="tabctl tl">
+        <button class="rail-switch" id="themeBtn" type="button" title="낮/밤 전환">
+          <span class="rail-track"><span class="rail-knob" id="themeSwatch"></span></span>
+          <span class="rail-label" id="themeLabel">밤</span>
+        </button>
+      </div>
+
+      <div class="tabctl tr">
+        <button class="win-btn" id="winMin" type="button" title="트레이로 숨기기" aria-label="트레이로 숨기기">–</button>
+        <button class="win-btn close" id="winClose" type="button" title="앱 종료" aria-label="앱 종료">×</button>
+      </div>
+
+      <!-- 왼쪽 윙: 큰 원형 D-패드 -->
+      <div class="wing left">
+        <div class="dpad" id="dpad">
+          <button class="dbtn up" type="button" data-key="UP" aria-label="이전 화면"><i></i></button>
+          <button class="dbtn left" type="button" data-key="LEFT" aria-label="이전 봇"><i></i></button>
+          <span class="dbtn mid emblem" aria-hidden="true">◈</span>
+          <button class="dbtn right" type="button" data-key="RIGHT" aria-label="다음 봇"><i></i></button>
+          <button class="dbtn down" type="button" data-key="DOWN" aria-label="다음 화면"><i></i></button>
+        </div>
+      </div>
+
+      <!-- 오른쪽 윙: 큼지막한 A · B 타원 버튼 + C -->
+      <div class="wing right">
+        <div class="ab-pad">
+          <button class="ab-key a" type="button" data-key="A"><b>A</b><span>돌보기</span></button>
+          <button class="ab-key b" type="button" data-key="B"><b>B</b><span>모드</span></button>
+          <button class="ab-key c" type="button" data-key="C"><b>C</b><span>메뉴</span></button>
         </div>
       </div>
 
@@ -363,6 +339,7 @@
     </div>
   </div>
 
+  <script src="chassis.js"></script>
   <script src="house.js"></script>
   <script src="tamagotchi.js"></script>
   <script src="sfx.js"></script>
