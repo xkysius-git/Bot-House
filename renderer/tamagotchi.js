@@ -453,10 +453,7 @@
   }
 
   function groundY() {
-    return Math.round(state.view.lh - clamp(state.view.lh * 0.19, 20, 34));
-  }
-
-  function groundY() {
+    // 아래쪽 미니 게이지에 발이 가리지 않게 기존보다 살짝 위에 세운다
     return Math.round(state.view.lh - clamp(state.view.lh * 0.2, 20, 38));
   }
 
