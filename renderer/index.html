@@ -17,7 +17,8 @@
         </div>
       </div>
       <div class="viewswitch" id="viewSwitch">
-        <button type="button" class="on" data-view="house">하우스</button>
+        <button type="button" class="on" data-view="tamagotchi">다마고치</button>
+        <button type="button" data-view="house">하우스</button>
         <button type="button" data-view="usage">사용량</button>
       </div>
       <div class="topbar-actions">
@@ -40,7 +41,69 @@
 
     <main class="layout">
       <section class="stage">
-        <div class="scene-holder">
+        <div class="tama" id="tamaView">
+          <div class="tama-device">
+            <div class="tama-top">
+              <div class="tama-brand">
+                <span class="tama-led"></span>
+                <span class="tama-brand-name">BOT HOUSE</span>
+                <span class="tama-brand-sub">CARE UNIT</span>
+              </div>
+              <div class="tama-modes">
+                <button type="button" class="tama-mode on" data-mode="focus">한 마리</button>
+                <button type="button" class="tama-mode" data-mode="all">전체 보기</button>
+              </div>
+            </div>
+
+            <div class="tama-screen" id="tamaScreen">
+              <div class="tama-focus" id="tamaFocus">
+                <canvas id="tamaStage" width="192" height="108"></canvas>
+                <div class="tama-hud">
+                  <div class="tama-who">
+                    <div class="tama-who-line">
+                      <span class="tama-name" id="tamaName">오이지</span>
+                      <span class="tama-role" id="tamaRole"></span>
+                    </div>
+                    <span class="tama-meta" id="tamaMeta"></span>
+                  </div>
+                  <span class="tama-state idle" id="tamaState">쉬는 중</span>
+                </div>
+                <div class="tama-bubble" id="tamaBubble" hidden></div>
+                <div class="tama-meters" id="tamaMeters"></div>
+              </div>
+              <div class="tama-quad" id="tamaQuad" hidden></div>
+              <div class="tama-glass" aria-hidden="true"></div>
+            </div>
+
+            <div class="tama-slots" id="tamaSlots"></div>
+
+            <div class="tama-controls" id="tamaControls">
+              <button type="button" class="tama-btn" data-act="pet">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 11V5.5a1.5 1.5 0 0 1 3 0V10m0-4.5a1.5 1.5 0 0 1 3 0V10m0-3.5a1.5 1.5 0 0 1 3 0V12m0-2.5a1.4 1.4 0 0 1 3 0v4.3c0 3.3-2.3 5.7-5.6 5.7h-1.6c-2 0-3.2-.8-4.3-2.3l-3-4.4a1.5 1.5 0 0 1 2.4-1.8L8 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span class="tama-btn-label">쓰다듬기</span>
+              </button>
+              <button type="button" class="tama-btn" data-act="snack">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10h16l-1.4 7.2a2 2 0 0 1-2 1.6H7.4a2 2 0 0 1-2-1.6L4 10Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M6 10c0-2.2 1.6-3.4 3.4-3.4 1 0 1.7.5 2.1 1.2.5-.7 1.2-1.2 2.2-1.2C15.5 6.6 17 7.8 17 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M9 13.4h6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                <span class="tama-btn-label">간식</span>
+              </button>
+              <button type="button" class="tama-btn" data-act="cheer">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l1.9 4.9 5.1.4-3.9 3.3 1.2 5.1L12 14.4l-4.3 2.8 1.2-5.1L5 8.8l5.1-.4L12 3.5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M18.5 17.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8Z" fill="currentColor"/></svg>
+                <span class="tama-btn-label">응원하기</span>
+              </button>
+              <button type="button" class="tama-btn" data-act="sleep">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8.2 8.2 0 1 0 10.5 10.5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                <span class="tama-btn-label">재우기</span>
+              </button>
+            </div>
+
+            <div class="tama-foot" aria-hidden="true">
+              <span class="tama-holes"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+              <span class="tama-screw"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="scene-holder" id="sceneHolder" hidden>
         <div class="scene" id="scene">
           <canvas id="house" width="480" height="270"></canvas>
           <div class="zone-labels" aria-hidden="true">
@@ -207,6 +270,7 @@
   </div>
 
   <script src="house.js"></script>
+  <script src="tamagotchi.js"></script>
   <script src="preview.js"></script>
   <script src="app.js"></script>
 </body>

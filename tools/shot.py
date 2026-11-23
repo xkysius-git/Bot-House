@@ -23,7 +23,9 @@ async def main():
 
         # 1) 작업 중 상태 — 석박지·클로드가 책상에 앉아 있는 화면
         await page.goto(f"{URL}?demo=work")
-        await page.wait_for_timeout(11000)
+        await page.wait_for_timeout(1500)
+        await page.click("#viewSwitch button[data-view='house']")
+        await page.wait_for_timeout(9500)
         await page.screenshot(path=os.path.join(OUT, "01-work.png"))
 
         # 2) 캐릭터 클릭 → 팝오버
@@ -62,12 +64,16 @@ async def main():
         # 7) 모두 쉬는 중 — 휴게실 배회
         await page.click("#themeBtn")
         await page.goto(f"{URL}?demo=idle")
-        await page.wait_for_timeout(6000)
+        await page.wait_for_timeout(1200)
+        await page.click("#viewSwitch button[data-view='house']")
+        await page.wait_for_timeout(5000)
         await page.screenshot(path=os.path.join(OUT, "08-idle.png"))
 
         # 8) 새 버전 다운로드 완료 알림
         await page.goto(f"{URL}?demo=update")
-        await page.wait_for_timeout(2500)
+        await page.wait_for_timeout(1200)
+        await page.click("#viewSwitch button[data-view='house']")
+        await page.wait_for_timeout(1500)
         await page.screenshot(path=os.path.join(OUT, "09-update.png"))
 
         print(json.dumps({"errors": errors[:20], "out": OUT}, ensure_ascii=False, indent=2))

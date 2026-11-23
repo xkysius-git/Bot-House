@@ -18,7 +18,7 @@
     popBot: null,
     usage: null,
     update: {},
-    view: 'house'
+    view: 'tamagotchi'
   };
 
   const BOT_IDS = ['oiji', 'takuan', 'sbji', 'claude'];
@@ -163,6 +163,7 @@
     renderBotList();
     renderClaudeCard();
     renderUpdate();
+    if (window.Tama) window.Tama.setBots(app.bots);
   }
 
   /* 업데이트 알림 -------------------------------------------------- */
@@ -264,7 +265,9 @@
 
     const pop = el('popover');
     pop.hidden = false;
-    const anchor = window.House.anchorOf(id) || { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    const anchor = (app.view === 'tamagotchi' && window.Tama ? window.Tama.anchorOf(id) : null)
+      || window.House.anchorOf(id)
+      || { x: window.innerWidth / 2, y: window.innerHeight / 2 };
     const rect = pop.getBoundingClientRect();
     const left = Math.min(Math.max(12, anchor.x - rect.width / 2), window.innerWidth - rect.width - 12);
     const top = Math.min(Math.max(12, anchor.y - rect.height - 14), window.innerHeight - rect.height - 12);
@@ -307,6 +310,7 @@
     document.body.className = `theme-${mode}`;
     el('themeLabel').textContent = mode === 'day' ? '낮' : '밤';
     window.House.setTheme(mode);
+    if (window.Tama) window.Tama.setTheme(mode);
   }
 
   async function saveSettings() {
@@ -481,12 +485,16 @@
   function switchView(view) {
     app.view = view;
     document.querySelectorAll('#viewSwitch button').forEach((b) => b.classList.toggle('on', b.dataset.view === view));
+    el('tamaView').hidden = view !== 'tamagotchi';
+    el('sceneHolder').hidden = view !== 'house';
     el('scene').hidden = view !== 'house';
-    el('logPanel').hidden = view !== 'house' ? true : el('logPanel').hidden;
+    el('statusbar').hidden = view !== 'house';
+    el('logPanel').hidden = view === 'usage' ? true : el('logPanel').hidden;
     el('usageView').hidden = view !== 'usage';
-    el('logBtn').hidden = view !== 'house';
+    el('logBtn').hidden = view === 'usage';
+    if (window.Tama) window.Tama.setVisible(view === 'tamagotchi');
     if (view === 'usage') loadUsage(false);
-    else window.House.setSelected(app.selected);
+    else if (view === 'house') window.House.setSelected(app.selected);
   }
 
   /* -------------------------------------------------- 이벤트 */
@@ -584,6 +592,16 @@
         if (!el('settingsModal').hidden) el('settingsModal').hidden = true;
         else if (!el('popover').hidden) closePopover();
         else if (!el('logPanel').hidden) toggleLog(false);
+        return;
+      }
+      if (e.target && e.target.tagName === 'INPUT') return;
+      if (app.view !== 'tamagotchi') return;
+      const idx = Number(e.key);
+      if (idx >= 1 && idx <= 4) window.Tama.focus(BOT_IDS[idx - 1]);
+      else if (e.key === ' ' || e.key === 'Enter') {
+        if (document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('tama-btn')) return;
+        e.preventDefault();
+        window.Tama.act('pet');
       }
     });
 
@@ -627,7 +645,15 @@
       botDefs: app.botDefs,
       onSelect: (id) => openPopover(id)
     });
+    await window.Tama.init({
+      canvas: el('tamaStage'),
+      screen: el('tamaScreen'),
+      bots: app.bots,
+      botDefs: app.botDefs,
+      theme: app.settings.theme || 'night'
+    });
     bind();
+    switchView(app.view);
     renderAll();
     setInterval(renderClaudeCard, 5000);
     setInterval(paintAvatars, 140);
