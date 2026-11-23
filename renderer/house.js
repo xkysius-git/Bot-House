@@ -365,7 +365,9 @@
         el.hidden = true;
         continue;
       }
-      const p = toScreen(actor.x, actor.y - 30);
+      const idx = ['oiji', 'takuan', 'sbji', 'claude'].indexOf(actor.def.id);
+      const lift = 30 + (idx % 2) * 9;
+      const p = toScreen(actor.x, actor.y - lift);
       el.hidden = false;
       el.textContent = text;
       el.className = `bubble${working ? ' work' : ''}${offline ? ' off' : ''}`;
@@ -430,6 +432,7 @@
     const actor = state.actors.get(id);
     if (!actor) return null;
     const rect = state.canvas.getBoundingClientRect();
+    if (!rect.width) return null;
     const p = toScreen(actor.x, actor.y - 26);
     return { x: rect.left + p.x, y: rect.top + p.y };
   }

@@ -72,9 +72,8 @@
       const anim = st === 'working' ? 'work' : st === 'offline' ? 'sleep' : 'idle';
       const list = frames[anim];
       const idx = list[Math.floor(app.avatarFrame / (anim === 'work' ? 3 : 6)) % list.length];
-      const size = node.classList.contains('small') ? 34 : node.classList.contains('chip-avatar') ? 30 : 40;
-      const scaleW = document.querySelector('.bot-row .avatar') ? 418 : 440;
-      node.style.backgroundSize = `${(size * 11)}px ${size}px`;
+      const size = Math.round(node.getBoundingClientRect().width) || 40;
+      node.style.backgroundSize = `${size * 11}px ${size}px`;
       node.style.backgroundPosition = `${-idx * size}px 0`;
     });
   }
@@ -223,8 +222,13 @@
     toggle.textContent = st.state === 'working' ? '테스트: 대기로 표시' : '테스트: 작업 중으로 표시';
     toggle.dataset.bot = id;
 
-    const recent = app.logs.slice(-3).map((l) => l.line).join('\n');
-    el('popLog').textContent = recent || '아직 기록이 없어요.';
+    const popLog = el('popLog');
+    if (id === 'claude') {
+      popLog.hidden = false;
+      popLog.textContent = app.logs.slice(-3).map((l) => l.line).join('\n') || '아직 기록이 없어요.';
+    } else {
+      popLog.hidden = true;
+    }
 
     const pop = el('popover');
     pop.hidden = false;
@@ -328,7 +332,7 @@
     return `<div class="bars">${days.map((d, i) => {
       const date = new Date(`${d.date}T00:00:00`);
       const label = DAY_LABEL[date.getDay()] || '';
-      const h = Math.max(2, Math.round((d.total / max) * 40));
+      const h = Math.max(2, Math.round((d.total / max) * 34));
       const today = i === days.length - 1 ? ' today' : '';
       return `<div class="bar${today}" title="${d.date} · ${fmtFull(d.total)} 토큰"><i style="height:${h}px"></i><span>${label}</span></div>`;
     }).join('')}</div>`;
@@ -400,7 +404,7 @@
                <div><dt>이번 주</dt><dd>${fmtTokens(usage.weekTokens)}</dd></div>
                <div><dt>수신</dt><dd>${st.usageAt ? timeAgo(st.usageAt) : '-'}</dd></div>
              </dl>`
-          : `<p class="empty">원격에서 도는 봇이라 이 PC에서는 토큰을 셀 수 없어요.<br><span style="opacity:.7">상태 API로 사용량을 보내면 여기에 표시돼요.</span></p>`}
+          : `<p class="empty">로컬에서 셀 수 없는 원격 봇이에요.<br><span style="opacity:.7">상태 API로 사용량을 보내면 표시돼요.</span></p>`}
       </article>`;
   }
 
@@ -540,6 +544,7 @@
       if (pop.hidden) return;
       if (pop.contains(e.target)) return;
       if (e.target.closest('.status-chip') || e.target.closest('.bot-row')) return;
+      if (e.target.closest('#scene')) return;
       closePopover();
     });
   }
