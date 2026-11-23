@@ -120,9 +120,11 @@
 
   /* ------------------------------------------------------------ 이동 로직 */
   function pickWaypoint(actor) {
+    const others = Array.from(state.actors.values()).filter((a) => a !== actor);
     let pick = LOUNGE[Math.floor(Math.random() * LOUNGE.length)];
     let tries = 0;
-    while (Math.hypot(pick.x - actor.x, pick.y - actor.y) < 46 && tries < 8) {
+    const crowded = (p) => others.some((o) => Math.hypot(o.x - p.x, o.y - p.y) < 30);
+    while ((Math.hypot(pick.x - actor.x, pick.y - actor.y) < 46 || crowded(pick)) && tries < 14) {
       pick = LOUNGE[Math.floor(Math.random() * LOUNGE.length)];
       tries += 1;
     }
@@ -205,6 +207,9 @@
             actor.mode = 'rest';
             actor.anim = 'idle';
             actor.restUntil = now + 1800 + Math.random() * 4200;
+          } else if (dist < 26 && Array.from(state.actors.values()).some((o) => o !== actor && Math.hypot(o.x - target.x, o.y - target.y) < 8)) {
+            const wp = pickWaypoint(actor);
+            actor.queue = [wp];
           } else {
             const step = Math.min(dist, actor.speed * dt);
             actor.x += (dx / dist) * step;
