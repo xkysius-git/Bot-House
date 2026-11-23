@@ -86,6 +86,23 @@ function computeBots() {
   return out;
 }
 
+// "클로드 채널" 카드용 스냅샷. 앱이 띄운 세션이 없고 다른 창 세션이 있으면 그걸로 채운다.
+function claudeSnapshot() {
+  const base = manager.snapshot();
+  const ext = externalClaude ? externalClaude.snapshot() : null;
+  if (base.status === "running" || base.status === "starting" || !ext || !ext.running) return base;
+  return {
+    ...base,
+    status: "running",
+    message: "다른 창에서 실행 중인 세션",
+    pid: ext.pids[0] || null,
+    startedAt: ext.since,
+    cwd: "다른 창 (터미널)",
+    external: true,
+    lastActivity: ext.lastActivity || base.lastActivity
+  };
+}
+
 function pushBots(force = false) {
   const now = Date.now();
   if (!force && now - lastBotsPush < 180) return;
@@ -390,7 +407,7 @@ function registerIpc() {
     settings: store.all(),
     bots: computeBots(),
     botDefs: BOTS,
-    claude: manager.snapshot(),
+    claude: claudeSnapshot(),
     logs: manager.logBuffer.slice(-300),
     version: app.getVersion(),
     update: { ...updateState },
@@ -427,16 +444,16 @@ function registerIpc() {
 
   ipcMain.handle('claude:restart', async () => {
     await manager.restart();
-    return manager.snapshot();
+    return claudeSnapshot();
   });
   ipcMain.handle('claude:stop', async () => {
     manager.stop(true);
-    return manager.snapshot();
+    return claudeSnapshot();
   });
   ipcMain.handle('claude:start', async () => {
     manager.attempts = 0;
     await manager.start();
-    return manager.snapshot();
+    return claudeSnapshot();
   });
   ipcMain.handle('logs:get', () => manager.logBuffer.slice(-400));
 
@@ -508,7 +525,7 @@ if (!gotLock) {
 
     manager.on('log', (entry) => send('log', entry));
     manager.on('state', () => {
-      send('claude', manager.snapshot());
+      send('claude', claudeSnapshot());
       pushBots(true);
     });
     manager.on('activity', () => pushBots(true));
@@ -530,7 +547,7 @@ if (!gotLock) {
     }, 60000);
     statusPollTimer = setInterval(pollStatusUrl, 15000);
 
-    externalClaude = new ExternalClaudeWatcher({ onChange: () => pushBots(true) });
+    externalClaude = new ExternalClaudeWatcher({ onChange: () => { send("claude", claudeSnapshot()); pushBots(true); } });
     externalClaude.start();
 
     if (store.get('autoConnect')) {

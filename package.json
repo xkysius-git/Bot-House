@@ -1,7 +1,7 @@
 {
   "name": "bot-house",
   "productName": "Bot House",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Bot House — 봇들이 사는 집, Claude 채널 자동 연결 런처",
   "main": "electron/main.js",
   "author": {

@@ -62,6 +62,7 @@ class ExternalClaudeWatcher {
     this.running = false;
     this.lastActivity = null;
     this.checkedAt = 0;
+    this.since = null; // 처음 감지한 시각 (연결 시간 표시용)
     this.timer = null;
   }
 
@@ -84,6 +85,8 @@ class ExternalClaudeWatcher {
     const mtime = running ? latestTranscriptMtime() : 0;
     const changed = running !== this.running || (mtime && mtime !== this.lastActivity);
     this.pids = pids;
+    if (running && !this.running) this.since = Date.now();
+    if (!running) this.since = null;
     this.running = running;
     if (mtime) this.lastActivity = mtime;
     this.checkedAt = Date.now();
@@ -91,7 +94,7 @@ class ExternalClaudeWatcher {
   }
 
   snapshot() {
-    return { running: this.running, pids: this.pids, lastActivity: this.lastActivity, checkedAt: this.checkedAt };
+    return { running: this.running, pids: this.pids, lastActivity: this.lastActivity, checkedAt: this.checkedAt, since: this.since };
   }
 }
 
