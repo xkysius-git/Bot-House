@@ -22,7 +22,12 @@ function cleanLine(raw) {
 }
 
 const IS_WIN = process.platform === 'win32';
-const CONSOLE_TITLE = 'BotHouse Claude Channel';
+const CONSOLE_TITLE = 'A.I.Mon Claude Channel';
+// 1.0.5까지 쓰던 창 제목. 업데이트 후에도 옛 창이 남아 있으면 정리할 수 있게 함께 본다.
+const LEGACY_CONSOLE_TITLES = ['BotHouse Claude Channel'];
+// MCP(텔레그램 채널) 첫 연결 제한시간. 기본 30초는 Windows 콘솔 창에서 빠듯해서 90초로 늘린다.
+const DEFAULT_MCP_TIMEOUT = '90000';
+const MCP_TIMEOUT = process.env.MCP_TIMEOUT || DEFAULT_MCP_TIMEOUT;
 const WINDOW_POLL_MS = 8000;          // 창 모드에서 채널이 살아 있는지 확인하는 간격
 const WINDOW_START_TIMEOUT_MS = 12000; // 창을 띄운 뒤 이만큼 지나도 채널이 안 보이면 오류로 본다
 
@@ -34,10 +39,16 @@ function psLiteral(value) {
 /**
  * cmd.exe에 넘길 명령 한 줄. 창을 띄우자마자 UTF-8 코드페이지와 창 제목을 잡고 claude를 실행한다.
  * claude가 끝난 뒤에도 창을 닫지 않으려고 /k로 띄우므로, 오류가 나면 창에서 그대로 볼 수 있다.
+ * MCP_TIMEOUT을 먼저 넣어 두어 텔레그램 채널의 30초 연결 제한에 걸리지 않게 한다.
  */
 function windowsConsoleCommand(cmdPath, args) {
   const quoted = [`"${cmdPath}"`, ...args.map((a) => `"${a}"`)].join(' ');
-  return [`title ${CONSOLE_TITLE}`, 'chcp 65001>nul', quoted].join(' & ');
+  return [
+    `title ${CONSOLE_TITLE}`,
+    'chcp 65001>nul',
+    `set "MCP_TIMEOUT=${MCP_TIMEOUT}"`,
+    quoted
+  ].join(' & ');
 }
 
 function runPowerShell(script, timeout = 25000) {
@@ -251,6 +262,7 @@ class ClaudeManager extends EventEmitter {
 
     const env = {
       ...process.env,
+      MCP_TIMEOUT,
       PYTHONIOENCODING: 'utf-8',
       NO_COLOR: '1',
       FORCE_COLOR: '0',
@@ -466,12 +478,14 @@ class ClaudeManager extends EventEmitter {
     try { process.kill(pid, 'SIGTERM'); } catch (_) { /* noop */ }
   }
 
-  // PID를 못 받았을 때를 위한 안전망: 우리 창 제목을 가진 콘솔을 트리째 닫는다
+  // PID를 못 받았을 때를 위한 안전망: 우리 창 제목(옛 제목 포함)을 가진 콘솔을 트리째 닫는다
   killConsoleWindows() {
     if (!IS_WIN) return;
-    try {
-      execFile('taskkill', ['/FI', `WINDOWTITLE eq ${CONSOLE_TITLE}`, '/T', '/F'], { windowsHide: true }, () => {});
-    } catch (_) { /* noop */ }
+    for (const title of [CONSOLE_TITLE, ...LEGACY_CONSOLE_TITLES]) {
+      try {
+        execFile('taskkill', ['/FI', `WINDOWTITLE eq ${title}`, '/T', '/F'], { windowsHide: true }, () => {});
+      } catch (_) { /* noop */ }
+    }
   }
 
   // 남아 있는 콘솔 창을 닫고 창 모드 상태를 비운다

@@ -338,7 +338,8 @@ body.theme-day .lcd-glass {
 .crown-name {
   font-family: var(--font-pixel);
   font-size: 6.5px;
-  letter-spacing: .14em;
+  /* A.I.Mon처럼 마침표가 들어간 이름은 자간을 넓히면 점이 따로 떨어져 보여서 좁게 둔다 */
+  letter-spacing: .06em;
   color: var(--bezel-ink);
   opacity: .9;
   white-space: nowrap;

@@ -108,8 +108,8 @@ class TelegramChat extends EventEmitter {
       await this.disconnect(true);
       this.client = new TelegramClient(new StringSession(this.loadSession()), Number(s.tgApiId), String(s.tgApiHash).trim(), {
         connectionRetries: 5,
-        deviceModel: 'Bot House',
-        appVersion: 'Bot House',
+        deviceModel: 'A.I.Mon',
+        appVersion: 'A.I.Mon',
         systemVersion: process.platform
       });
       this.client.setLogLevel('error');

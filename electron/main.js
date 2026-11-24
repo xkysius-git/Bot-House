@@ -14,6 +14,13 @@ const { ExternalClaudeWatcher } = require('./external-claude');
 const { TelegramChat } = require('./chat-telegram');
 
 const ROOT = path.join(__dirname, '..');
+
+/* 기존 설치본과 같은 설정 폴더를 쓴다.
+ * 앱 이름(productName)이 Bot House → A.I.Mon으로 바뀌면 Electron의 userData 기본 경로도
+ * %APPDATA%\A.I.Mon으로 옮겨가서, 설정·텔레그램 로그인·봇 상태가 사라진 것처럼 보인다.
+ * 1.0.5까지 쓰던 경로를 그대로 고정해 업데이트해도 그대로 이어지게 한다. */
+app.setPath('userData', path.join(app.getPath('appData'), 'Bot House'));
+
 const WORKING_WINDOW_MS = 25000;   // 최근 25초 안에 활동이 있으면 '작업 중'
 const SIGNAL_TTL_MS = 30 * 60 * 1000; // 외부에서 받은 상태는 30분 뒤 기본값으로
 const HEARTBEAT_TTL_MS = 10 * 60 * 1000; // 원격 봇이 10분 넘게 신호가 없으면 오프라인
@@ -212,7 +219,7 @@ async function pollStatusUrl() {
       if (gistCache.id === gistId && Date.now() - gistCache.fetchedAt < GIST_POLL_MS) return;
       if (gistCache.id !== gistId) Object.assign(gistCache, { id: gistId, etag: null, files: null });
       gistCache.fetchedAt = Date.now();
-      const headers = { 'User-Agent': 'BotHouse', Accept: 'application/vnd.github+json' };
+      const headers = { 'User-Agent': 'A.I.Mon', Accept: 'application/vnd.github+json' };
       if (gistCache.etag) headers['If-None-Match'] = gistCache.etag;
       const res = await fetch(`https://api.github.com/gists/${gistId}`, { headers, signal: AbortSignal.timeout(8000) });
       if (res.status === 200) {
@@ -360,7 +367,7 @@ function createWindow() {
     hasShadow: false,
     show: false,
     backgroundColor: '#00000000',
-    title: 'Bot House',
+    title: 'A.I.Mon',
     icon: path.join(ROOT, 'assets', 'icon.png'),
     autoHideMenuBar: true,
     webPreferences: {
@@ -388,7 +395,7 @@ function createWindow() {
       win.hide();
       if (tray && process.platform === 'win32') {
         tray.displayBalloon?.({
-          title: 'Bot House',
+          title: 'A.I.Mon',
           content: '창을 닫아도 봇들은 계속 집에 있어요. 트레이에서 다시 열 수 있어요.'
         });
       }
@@ -425,7 +432,7 @@ function buildTray() {
     console.error('[tray] 만들지 못했어요:', err.message);
     return;
   }
-  tray.setToolTip('Bot House — 봇들이 사는 집');
+  tray.setToolTip('A.I.Mon — 봇들이 사는 집');
   buildTrayMenu();
   tray.on('double-click', () => showWindow());
   tray.on('click', () => showWindow());
@@ -435,7 +442,7 @@ function buildTrayMenu() {
   if (!tray) return;
   const current = deviceScale();
   const menu = Menu.buildFromTemplate([
-    { label: 'Bot House 열기', click: () => showWindow() },
+    { label: 'A.I.Mon 열기', click: () => showWindow() },
     {
       label: '기기 크기',
       submenu: DEVICE_SCALES.map((o) => ({
@@ -504,7 +511,7 @@ function setupUpdater() {
     pushUpdate({ status: 'ready', version: info && info.version, percent: 100, message: '새 버전 준비 완료 — 재시작하면 적용돼요' });
     if (tray && process.platform === 'win32') {
       tray.displayBalloon?.({
-        title: 'Bot House 새 버전',
+        title: 'A.I.Mon 새 버전',
         content: '새 버전 다운로드가 끝났어요. 앱을 재시작하면 적용됩니다.'
       });
     }
@@ -516,7 +523,7 @@ function setupUpdater() {
       buttons: ['지금 재시작', '나중에'],
       defaultId: 0,
       cancelId: 1,
-      title: 'Bot House 새 버전',
+      title: 'A.I.Mon 새 버전',
       message: '새 버전 다운로드가 끝났어요.',
       detail: '지금 재시작하면 바로 적용되고, 나중에 눌러도 앱을 종료할 때 자동으로 설치돼요.'
     };
