@@ -677,7 +677,11 @@
 
     // 창 컨트롤
     el('winMin').addEventListener('click', () => bridge.hideWindow());
-    el('winClose').addEventListener('click', () => bridge.quit());
+    // × = 트레이로 숨기기 (설정에서 끈 경우에만 종료). 완전 종료는 메뉴의 '앱 종료'나 트레이 메뉴에서.
+    el('winClose').addEventListener('click', () => {
+      if (app.settings.minimizeToTray === false) bridge.quit();
+      else bridge.hideWindow();
+    });
 
     // 물리 버튼 (D-패드 + A·B)
     document.querySelectorAll('.dbtn, .ab-key').forEach((key) => {
