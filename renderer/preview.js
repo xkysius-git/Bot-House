@@ -16,6 +16,7 @@
 
   const params = new URLSearchParams(location.search);
   const demo = params.get('demo') || 'idle';
+  window.__PREVIEW_VIEW__ = params.get('view') || '';
 
   let bots = {
     oiji: { state: 'idle', note: '휴게실에서 쉬는 중', lastActivity: Date.now() - 1000 * 60 * 12, connected: true },
@@ -43,7 +44,7 @@
 
   const settings = {
     workDir: 'C:\\Users\\XKY\\projects', autoConnect: true, autoReconnect: true, minimizeToTray: true,
-    launchAtLogin: false, theme: 'night', claudeCommand: 'claude',
+    launchAtLogin: false, theme: params.get('theme') === 'day' ? 'day' : 'night', claudeCommand: 'claude',
     claudeArgs: '--channels plugin:telegram@claude-plugins-official',
     statusApiEnabled: true, statusApiPort: 47820, statusUrl: ''
   };
@@ -86,6 +87,11 @@
     onSettings: (f) => { listeners.settings.push(f); return () => {}; },
     platform: 'win32'
   };
+
+  // 데모: 방 3개 확인용 (작업실 2, 거실 1, 침실 1)
+  if (demo === 'rooms') {
+    bots.takuan = { ...bots.takuan, state: 'offline', note: '' };
+  }
 
   // 데모: 새 버전 알림 UI 확인용
   if (params.get('demo') === 'update') {

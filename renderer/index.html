@@ -18,7 +18,7 @@
                 <div class="lcd-top">
                   <div class="lcd-tabs" id="viewSwitch">
                     <button type="button" class="on" data-view="tamagotchi">홈</button>
-                    <button type="button" data-view="house">작업실</button>
+                    <button type="button" data-view="house">집</button>
                     <button type="button" data-view="usage">사용량</button>
                   </div>
                   <div class="tama-modes" id="tamaModes">
@@ -66,12 +66,13 @@
                     </div>
                   </section>
 
-                  <!-- 작업실: 픽셀 하우스 -->
+                  <!-- 집: 방 3개 (침실·거실·작업실) -->
                   <section class="page page-house" id="sceneHolder" hidden>
                     <div class="scene" id="scene">
                       <canvas id="house" width="480" height="270"></canvas>
                       <div class="zone-labels" aria-hidden="true">
-                        <span class="zone-label">휴게실</span>
+                        <span class="zone-label">침실</span>
+                        <span class="zone-label">거실</span>
                         <span class="zone-label">작업실</span>
                       </div>
                       <div class="bubbles" id="bubbles"></div>

@@ -791,7 +791,7 @@
       theme: app.settings.theme || 'night'
     });
     bind();
-    switchView(app.view);
+    switchView(window.__PREVIEW_VIEW__ || app.view);
     applyWindowMode('focus', false);
     renderAll();
     setInterval(renderClaudeCard, 5000);
