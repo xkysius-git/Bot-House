@@ -558,6 +558,61 @@
     switchView(VIEWS[(i + step + VIEWS.length) % VIEWS.length]);
   }
 
+  /* -------------------------------------------- 화면 단위 넘기기 (D-패드 위·아래, 휠) */
+  function isScroller(node) {
+    if (!node || node.nodeType !== 1 || node.hidden) return false;
+    const oy = getComputedStyle(node).overflowY;
+    return (oy === 'auto' || oy === 'scroll') && node.scrollHeight > node.clientHeight + 2;
+  }
+
+  function scrollerIn(root) {
+    if (!root || root.hidden) return null;
+    if (isScroller(root)) return root;
+    for (const node of root.querySelectorAll('*')) {
+      if (node.offsetParent !== null && isScroller(node)) return node;
+    }
+    return null;
+  }
+
+  // 지금 보이는 패널에서 넘길 수 있는 목록: 열린 시트가 먼저, 없으면 현재 화면
+  function activeScroller() {
+    if (app.sheet) {
+      const sheet = Array.from(document.querySelectorAll('.sheet')).find((s) => !s.hidden);
+      return scrollerIn(sheet);
+    }
+    const views = { tamagotchi: 'tamaView', house: 'sceneHolder', usage: 'usageView' };
+    return scrollerIn(el(views[app.view]));
+  }
+
+  // 한 번에 한 화면씩 (윗줄 조금 겹쳐서 어디까지 봤는지 이어지게)
+  function pageBy(sc, dir) {
+    const max = sc.scrollHeight - sc.clientHeight;
+    const atEdge = dir > 0 ? sc.scrollTop >= max - 2 : sc.scrollTop <= 2;
+    if (atEdge) return false;
+    sc.scrollBy({ top: dir * Math.max(40, sc.clientHeight - 20), behavior: 'smooth' });
+    return true;
+  }
+
+  // 위·아래: 넘길 게 남았으면 한 화면 넘기고, 끝이면 다음 화면(홈·집·사용량)으로
+  function pageStep(dir) {
+    const sc = activeScroller();
+    if (sc && pageBy(sc, dir)) return;
+    stepView(dir);
+  }
+
+  let wheelLock = 0;
+  function onWheel(e) {
+    if (!e.deltaY || e.ctrlKey) return;
+    let node = e.target;
+    while (node && node !== document.body && !isScroller(node)) node = node.parentElement;
+    if (!node || node === document.body) return;
+    e.preventDefault();
+    const now = performance.now();
+    if (now < wheelLock) return;
+    wheelLock = now + 380;
+    pageBy(node, e.deltaY > 0 ? 1 : -1);
+  }
+
   function stepBot(step) {
     if (!window.Tama) return;
     const i = BOT_IDS.indexOf(window.Tama.focusId());
@@ -629,8 +684,8 @@
       key.addEventListener('click', () => {
         const k = key.dataset.key;
         const care = app.sheet === 'care';
-        if (k === 'UP') stepView(-1);
-        else if (k === 'DOWN') stepView(1);
+        if (k === 'UP') pageStep(-1);
+        else if (k === 'DOWN') pageStep(1);
         else if (k === 'LEFT') { if (care) moveCare(-1); else stepBot(-1); }
         else if (k === 'RIGHT') { if (care) moveCare(1); else stepBot(1); }
         else if (k === 'A') { if (care) runCare(); else openSheet('care'); }
@@ -722,6 +777,12 @@
         return;
       }
       if (e.target && e.target.tagName === 'INPUT') return;
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'PageUp' || e.key === 'PageDown') {
+        if (!el('settingsModal').hidden) return;
+        e.preventDefault();
+        pageStep(e.key === 'ArrowUp' || e.key === 'PageUp' ? -1 : 1);
+        return;
+      }
       if (app.view !== 'tamagotchi' || app.sheet) return;
       const idx = Number(e.key);
       if (idx >= 1 && idx <= 4) window.Tama.focus(BOT_IDS[idx - 1]);
@@ -734,6 +795,9 @@
         window.Tama.act('pet');
       }
     });
+
+    // 휠도 한 줄씩이 아니라 한 화면씩 (설정 창은 그대로 일반 스크롤)
+    el('screenWrap').addEventListener('wheel', onWheel, { passive: false });
 
     document.addEventListener('tama-mode', (e) => {
       applyWindowMode((e.detail || {}).mode, true);

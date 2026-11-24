@@ -625,6 +625,16 @@ class ClaudeManager extends EventEmitter {
   dispose() {
     clearInterval(this.activityTimer);
     this.activityTimer = null;
+    // Windows 콘솔 창으로 띄운 채널은 앱을 끄거나 업데이트해도 살려 둔다.
+    // 앱이 다시 켜지면 --channels 프로세스를 찾아 그대로 이어 붙는다 (새로 띄우지 않음).
+    // 채널을 끄고 싶을 때는 'Claude 채널 멈추기'나 재연결 버튼이 창을 닫는다.
+    if (this.windowMode) {
+      this.manualStop = true;
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
+      this.stopWindowWatch();
+      return;
+    }
     this.stop(false);
   }
 }

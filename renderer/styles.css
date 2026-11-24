@@ -211,6 +211,8 @@ button { font-family: inherit; cursor: pointer; }
   height: var(--lcd-h, 254px);
   transform: translate(-50%, -50%);
   z-index: 3;
+  /* 액정 안은 끌기 영역에서 빼야 스크롤·클릭·마우스오버가 먹는다 */
+  -webkit-app-region: no-drag;
 }
 
 .lcd {
