@@ -19,5 +19,5 @@
 | 12 | 03_Life & Finance 공유 (장현님 OK: 개인별 메일이라 문제없음) | 오이지 공유 | | | 11-24 21:30 | 완료 | |
 | 13 | `/doctor prompt-audit` 실행 | 클로디 | 리포트 | Claude Code | 다음 PC 켤 때 | 대기 | |
 | 14 | 논문·보고서용 Claude 스킬 시험 (출처: 인스타 phd.saebyeok 11/22, 슬라이드 2~6에 실제 저장소. 오이지 확인, 클로디 GitHub API로 재확인 11-24). ① 문헌 `lingzhi227/agent-research-skills` ⭐477 라이선스 없음 ② 분석·그래프 `K-Dense-AI/scientific-agent-skills` ⭐58k MIT ③ 집필 `Imbad0202/academic-research-skills` ⭐58k 커스텀 라이선스 ④ 사전 리뷰 `claesbackman/AI-research-feedback` ⭐586 MIT (`/review-paper`) ⑤ 발표·문서 `anthropics/skills` (pptx·docx, 설치돼 있음). 대안: `Spark-To-Paper-Skills/paperjury` ⭐1.2k. 쓸 곳: 논문(2/20, 10번 목차 점검), KEIT 결과보고서(12/1)·제안서 PPT. 할 일: 도구 DB 등재 + 설치할 스킬 장현님 선택 | 클로디 | 검토 결과 | Claude Code 스킬 | 장현님이 다음에 지시 | 보류 (장현님 "다음에") | |
-| 15 | 제미니 봇(@xky_gemini_bot) 세팅 + 집 PC Claude 연결 + v1.0.9 확인 (오늘 분배 3번) | 장현님 (클로디 지원, 이 PC에 gemini-bot 폴더 있음) | | | 장현님 편할 때 | 대기 | |
+| 15 | 제미니 봇(@xky_gemini_bot) 세팅 + 집 PC Claude 연결 + v1.0.9 확인 (오늘 분배 3번)  — 세팅되면 이미지 생성도 Gemini로 나눠 쓸 수 있음 (장현님 11-24, 오이지 사용량 부담 줄이기) | 장현님 (클로디 지원, 이 PC에 gemini-bot 폴더 있음) | | | 장현님 편할 때 | 대기 | |
 | 16 | agent-desktop 설치 (vercel-labs, Apache-2.0) | 클로디 | | | Study_operator·A.I.Mon 급한 일 뒤 | 보류 | |
