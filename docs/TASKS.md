@@ -18,3 +18,4 @@
 | 11 | 업무 드라이브 공유 마무리 (01_Work, 04_Resources, 도구 DB 편집권, 스터디 대시보드 시트) + RULES.md에 드라이브 구조 | 오이지 공유 → 클로디 정리 | | | 11-24 21:30 | 완료 | RULES.md 2절 |
 | 12 | 03_Life & Finance 공유 (장현님 OK: 개인별 메일이라 문제없음) | 오이지 공유 | | | 11-24 21:30 | 완료 | |
 | 13 | `/doctor prompt-audit` A.I.Mon에 돌릴지 (오이지 릴스 정리) | 장현님 결정 | | | | 대기 (결정) | |
+| 14 | 논문용 Claude 스킬 시험 (출처: 인스타 phd.saebyeok 11/22 "스킬 5개로 조교 두기", 저장소 이름 없음 → 같은 기능 공개 스킬로 대체). 후보: 리뷰어 `Spark-To-Paper-Skills/paperjury` ⭐1.2k (투고 전 심사·판정·수정) / 글쓰기 `Master-cai/Research-Paper-Writing-Skills` ⭐8.5k / 문헌 노트 `917Dhj/DeepPaperNote` ⭐1.4k / 발표·문서 `anthropics/skills` (pptx·docx, 설치돼 있음). 계획: paperjury 설치 → 논문 목차·초안에 실행 (10번 '논문 목차 점검'과 연결), 도구 DB 등재 | 클로디 | 검토 결과 | Claude Code 스킬 | 장현님이 다음에 지시 | 보류 (장현님 "다음에") | |
