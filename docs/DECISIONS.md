@@ -24,3 +24,6 @@
 
 ## 업무 방식
 - 규칙 = `docs/RULES.md`, 할 일 = `docs/TASKS.md`, 결정 = 이 파일, 최종 그림 = `assets/sprites/`, 시안 백업 = 드라이브 `A.I.Mon_브랜딩`. 텔레그램 토픽·개인 드라이브 링크를 기준으로 쓰지 않는다.
+- (2026-11-24 오이지·장현 결정) **#6 장현 님 몫**: `@xky_gemini_bot` 세팅·집 PC 클로드 연결·`v1.0.9` 확인은 귀가 후 편할 때 진행.
+- (2026-11-24 오이지·장현 결정) **#8 `/doctor prompt-audit` & `agent-desktop`**: `/doctor prompt-audit`은 추후 집 PC에서 실행, `agent-desktop`은 `Study_operator`·`A.I.Mon` 마무리 후로 보류.
+- (2026-11-24 오이지·장현 결정) **#9 저장소·봇 이름**: 자동 업데이트 URL 유지를 위해 GitHub `Bot-House` 저장소명은 당장 유지하고, 표시 이름만 `A.I.Mon`으로 사용 후 안정화 시 변경.
