@@ -39,6 +39,7 @@
 - repo 이름: 자동 업데이트 주소 때문에 당분간 `Bot-House` 유지, 표시 이름만 A.I.Mon. 안정화 후 package.json publish repo와 같이 변경.
 
 ## 업무 방식
+- 검수·공유용 이미지는 **어두운 배경(#14161E)** 위 미리보기로 올린다. 흰 배경·투명 그대로 공유 금지. 원본 PNG는 투명 배경 유지 (장현님 11-25).
 - 규칙 = `docs/RULES.md`, 할 일 = `docs/TASKS.md`, 결정 = 이 파일, 최종 그림 = `assets/sprites/`, 시안 백업 = 드라이브 `A.I.Mon_브랜딩`. 텔레그램 토픽·개인 드라이브 링크를 기준으로 쓰지 않는다.
 - (2026-11-24 오이지·장현 결정) **#6 장현 님 몫**: `@xky_gemini_bot` 세팅·집 PC 클로드 연결·`v1.0.9` 확인은 귀가 후 편할 때 진행.
 - (2026-11-24 오이지·장현 결정) **#8 `/doctor prompt-audit` & `agent-desktop`**: `/doctor prompt-audit`은 추후 집 PC에서 실행, `agent-desktop`은 `Study_operator`·`A.I.Mon` 마무리 후로 보류.
