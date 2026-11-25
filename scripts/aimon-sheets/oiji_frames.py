@@ -1,21 +1,24 @@
 """Oiji (Pickle) frames built on the approved 03-oiji-bubble reference.
 
-Oiji's first form is a colourless soap bubble (thin grey rim, faint iridescent
-flecks) with two big black bar eyes - no sprout, not the green ㅍ.
+Oiji's first form is a soap bubble with two big black bar eyes - no sprout,
+not the green ㅍ.
 
-Two things changed after 장현 님's 2026-11-25 09:34 feedback:
+What 장현 님's 2026-11-25 09:34 and 10:05 feedback settled:
 
 * The bubble is ~78% of the old full-cell circle (36x34 px inside the 64 grid),
-  so it lines up with the 14 ㄱ~ㅎ Pickle bubbles in `oiji-14-bubbles.png`
-  instead of bulging over the whole cell.  The reference PNG filled its 128
-  cell edge to edge, so its silhouette is redrawn at the new size with the same
-  palette / rim / eye pixels.
-* Row 2 (consonant transformation) no longer flattens the official 14-bubble
-  sheet into a white mask.  Each frame cuts one pastel bubble out of
-  `oiji-14-bubbles.png` with its own colour, outline and rounded gloss intact,
-  then only the effort acting ( `> <` eyes, strain lines, sweat, sparkles ) is
-  layered on top.
+  so it lines up with the 14 ㄱ~ㅎ Pickle bubbles in `oiji-14-bubbles.png`.
+* It has to read as a bubble, not a white ball: the middle is hollow (alpha 0,
+  the room shows straight through), and only a 1px iridescent rim, a white
+  gloss blob on the upper left and a faint reflection on the lower right are
+  painted.  That still satisfies the #5 check - alpha is only ever 0 or 255.
+* Row 2 is the transformation beat: shrink with effort -> boil and wobble ->
+  the ㅍ shape catches with a `뿅!` burst -> the finished pastel ㅍ bubble with
+  clear eyes and a sparkle.  The letter itself is cut out of
+  `oiji-14-bubbles.png` with its own colour, outline and gloss intact.
+* The black eyes get a 1px pale keyline: the room can be the dark LCD
+  (`#12102a`), where bare black eyes on a hollow bubble would disappear.
 """
+import math
 import os
 
 import numpy as np
@@ -42,8 +45,15 @@ def _asset(name):
 
 
 WHITE = (0xFD, 0xFD, 0xFE)
-RIM = (0xC2, 0xCA, 0xDA)
-RIM_IN = (0xE9, 0xEE, 0xF6)
+RIM = (0x93, 0xA3, 0xBE)          # rim base: reads on both the cream and the dark LCD
+RIM_TOP = (0xB9, 0xC2, 0xE2)      # pale lavender at the crown
+RIM_HI = (0xD7, 0xDD, 0xF2)       # where the light hits (upper left)
+RIM_MINT = (0x9C, 0xCB, 0xC7)
+RIM_SKY = (0x9B, 0xB6, 0xDA)
+RIM_PINK = (0xCC, 0xB0, 0xC8)
+RIM_LAV = (0xB6, 0xBC, 0xE0)
+REFL = (0xD3, 0xDE, 0xF0)         # faint reflection on the lower right
+HALO = (0xAE, 0xBA, 0xCF)         # keyline under the black eyes
 TINT_MINT = (0xD6, 0xF0, 0xEC)
 TINT_PINK = (0xF6, 0xE0, 0xEE)
 TINT_LAV = (0xE0, 0xE2, 0xF6)
@@ -52,7 +62,7 @@ EYE = (0x12, 0x12, 0x16)
 GLINT = (0xFF, 0xFF, 0xFF)
 ZCOL = (0xA9, 0xB6, 0xC9)
 
-PALETTE = [WHITE, RIM, RIM_IN, TINT_MINT, TINT_PINK, TINT_LAV, TINT_GOLD, EYE, GLINT]
+PALETTE = [WHITE, RIM, REFL, TINT_MINT, TINT_PINK, TINT_LAV, TINT_GOLD, EYE, GLINT]
 
 # ------------------------------------------------------------- body geometry
 # 36x34 px bubble inside the 64 logical grid (was 46x46 = a full 128 cell).
@@ -62,23 +72,71 @@ BODY = None          # filled in _build_base()
 SIL = None
 
 
-def _super(cx, cy, rx, ry, n=2.15):
+def _field(cx, cy, rx, ry, n=2.15, wob=0.0, phase=0.0):
+    """Normalised superellipse distance; <= 1 is inside the bubble.
+
+    `wob` ripples the radius three times round the rim, which is what makes the
+    frame-2 silhouette look like it is boiling.
+    """
     yy, xx = np.mgrid[0:S, 0:S]
     d = (np.abs((xx - cx) / rx) ** n + np.abs((yy - cy) / ry) ** n) ** (1.0 / n)
-    return d <= 1.0
+    if wob:
+        th = np.arctan2(cy - yy, xx - cx)
+        d = d / (1.0 + wob * np.sin(3.0 * th + phase))
+    return d
 
 
-def _dilate4(mask, n=1):
+def _super(cx, cy, rx, ry, n=2.15):
+    return _field(cx, cy, rx, ry, n) <= 1.0
+
+
+def _erode8(mask, n=1):
     cur = mask.copy()
     for _ in range(n):
-        g = cur.copy()
-        for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-            ys, xs = np.where(cur)
-            ys2, xs2 = ys + dy, xs + dx
-            ok = (ys2 >= 0) & (ys2 < S) & (xs2 >= 0) & (xs2 < S)
-            g[ys2[ok], xs2[ok]] = True
-        cur = g
+        nxt = cur.copy()
+        for dy in (-1, 0, 1):
+            for dx in (-1, 0, 1):
+                if dy == 0 and dx == 0:
+                    continue
+                sh = np.zeros_like(cur)
+                ys, xs = np.where(cur)
+                ys2, xs2 = ys + dy, xs + dx
+                ok = (ys2 >= 0) & (ys2 < S) & (xs2 >= 0) & (xs2 < S)
+                sh[ys2[ok], xs2[ok]] = True
+                nxt &= sh
+        cur = nxt
     return cur
+
+
+def _band(mask, d0, d1):
+    """Pixels whose depth from the edge is d0..d1 (1 = the outer ring itself)."""
+    inner = mask if d0 <= 1 else _erode8(mask, d0 - 1)
+    return inner & ~_erode8(mask, d1)
+
+
+def _angle_map(cx, cy):
+    """Compass angle per pixel: 0 = right, 90 = up, 180 = left, 270 = down."""
+    yy, xx = np.mgrid[0:S, 0:S]
+    return np.degrees(np.arctan2(cy - yy, xx - cx)) % 360.0
+
+
+def _in_arc(ang, lo, hi):
+    if lo <= hi:
+        return (ang >= lo) & (ang <= hi)
+    return (ang >= lo) | (ang <= hi)
+
+
+def _arc_pts(cx, cy, rx, ry, a0, a1):
+    """1px-wide points along an ellipse arc (degrees, 90 = up)."""
+    pts = []
+    n = max(8, int(abs(a1 - a0) * 1.6))
+    for k in range(n + 1):
+        a = math.radians(a0 + (a1 - a0) * k / n)
+        x = int(round(cx + rx * math.cos(a)))
+        y = int(round(cy - ry * math.sin(a)))
+        if not pts or pts[-1] != (x, y):
+            pts.append((x, y))
+    return pts
 
 
 def _erode(mask, n=1):
@@ -184,46 +242,60 @@ EYE_H, EYE_W = EYE_SPRS[0].shape[:2]
 EYE_GAP = 5.0                       # eye pair = 5 + 5 + 5 = 15 of 36 px (42%)
 
 
-def _dot(img, x, y, col, r=1):
-    for dy in range(-r, r + 1):
-        for dx in range(-r, r + 1):
-            if dx * dx + dy * dy <= r * r + 0.2:
-                xx, yy = int(round(x)) + dx, int(round(y)) + dy
-                if 0 <= yy < S and 0 <= xx < S and A.mask_of(img)[yy, xx]:
-                    img[yy, xx] = (*col, 255)
-    return img
+def bubble(cx=32.0, cy=CY, rx=RX, ry=RY, wob=0.0, phase=0.0, dots=True):
+    """A see-through soap bubble: hollow middle, thin iridescent rim, glints.
+
+    Only the rim (1px, with a 2nd px along the lower right), the white gloss blob
+    on the upper left and a faint reflection are opaque.  Everything else stays
+    alpha 0 so the room shows straight through the film.
+    """
+    out = np.zeros((S, S, 4), np.uint8)
+    body = _field(cx, cy, rx, ry, wob=wob, phase=phase) <= 1.0
+    rim = body & ~_erode(body, 1)      # 4-connected: the 1px ring stays unbroken
+    ang = _angle_map(cx, cy)
+
+    # iridescent rim: pale lavender crown, mint left, sky bottom, pink lower right
+    col = np.empty((S, S, 3), float)
+    col[:] = RIM
+    for centre, tint, w in ((92, RIM_TOP, 0.85), (158, RIM_HI, 0.7),
+                            (208, RIM_MINT, 0.7), (268, RIM_SKY, 0.85),
+                            (320, RIM_PINK, 0.5), (14, RIM_LAV, 0.75)):
+        c = np.clip(np.cos(np.radians(ang - centre)), 0.0, None) ** 2 * w
+        col = col * (1 - c[..., None]) + np.array(tint, float) * c[..., None]
+    out[rim, :3] = col[rim].round().astype(np.uint8)
+    out[rim, 3] = 255
+
+    # the film thickens along the lower right where the light bends through it
+    thick = _band(body, 2, 2) & _in_arc(ang, 288, 24)
+    out[thick, :3] = REFL
+    out[thick, 3] = 255
+
+    # upper-left gloss: a small rounded white blob hugging the rim, plus one fleck
+    gx = int(round(cx - rx * 0.68))
+    gy = int(round(cy - ry * 0.68))
+    for dx, dy in ((1, 0), (0, 0), (0, 1), (1, 1), (0, 2)):
+        x, y = gx + dx, gy + dy
+        if 0 <= y < S and 0 <= x < S and not out[y, x, 3]:
+            out[y, x] = (*GLINT, 255)
+    x, y = int(round(cx - rx * 0.86)), int(round(cy - ry * 0.42))
+    if 0 <= y < S and 0 <= x < S and not out[y, x, 3]:
+        out[y, x] = (*GLINT, 255)
+
+    if dots and rx > 12:
+        # two 1px flecks caught on the film, well away from the hollow middle
+        for x, y, c in ((cx - rx * 0.30, cy - ry * 0.86, TINT_MINT),
+                        (cx + rx * 0.92, cy + ry * 0.36, TINT_PINK)):
+            yy, xx = int(round(y)), int(round(x))
+            if 0 <= yy < S and 0 <= xx < S and not out[yy, xx, 3]:
+                out[yy, xx] = (*c, 255)
+    return out
 
 
 def _build_base():
-    """Colourless soap bubble: white film, 1px grey rim, faint pastel flecks."""
     global BODY, SIL
     BODY = _super(32.0, CY, RX, RY)
     SIL = _super(32.0, CY, RX + 1.0, RY + 1.0)
-    out = np.zeros((S, S, 4), np.uint8)
-    A.put(out, _dilate4(BODY) & ~BODY, RIM)          # 1px outline, continuous
-    A.put(out, BODY, WHITE)
-    A.put(out, A.inner_band(BODY, 1, 1), RIM_IN)     # soft inner edge
-    ys, xs = np.where(BODY)
-    y0, y1, x0, x1 = ys.min(), ys.max(), xs.min(), xs.max()
-    h, w = y1 - y0, x1 - x0
-    yy, xx = np.mgrid[0:S, 0:S]
-    # the lower film thickens into a soft shade that follows the bottom curve
-    inner2 = _erode(BODY, 2)
-    inner1 = _erode(BODY, 1)
-    lens = ((xx - (x0 + w * 0.50)) / (w * 0.62)) ** 2 + ((yy - (y1 - h * 0.20)) / (h * 0.34)) ** 2 <= 1.0
-    A.put(out, lens & inner2, (0xF6, 0xF8, 0xFC))
-    deep = ((xx - (x0 + w * 0.50)) / (w * 0.44)) ** 2 + ((yy - (y1 - h * 0.02)) / (h * 0.20)) ** 2 <= 1.0
-    A.put(out, deep & inner1, (0xEE, 0xF1, 0xFA))
-    # faint iridescent streaks caught along the film (subtle at this size)
-    film = _erode(BODY, 1) & ~_erode(BODY, 8)
-    for (fx, fy, dx, dy, n, col) in ((x0 + w * 0.20, y0 + h * 0.32, 1, 1, 3, TINT_MINT),
-                                     (x0 + w * 0.82, y0 + h * 0.52, 0, 1, 3, TINT_PINK),
-                                     (x0 + w * 0.32, y0 + h * 0.88, 1, 0, 3, TINT_GOLD)):
-        for i in range(n):
-            px, py = int(round(fx + dx * i)), int(round(fy + dy * i))
-            if 0 <= py < S and 0 <= px < S and film[py, px]:
-                out[py, px] = (*col, 255)
-    return out
+    return bubble()
 
 
 BASE = _build_base()
@@ -232,33 +304,12 @@ BOT = np.where(BODY)[0].max()
 
 
 # ---------------------------------------------------------------- eye acting
-def _nearest_fill(img, region, source):
-    """Grow `source` pixels into `region` (multi-source BFS), copying colours."""
-    from collections import deque
-    out = img.copy()
-    todo = region & ~source
-    dq = deque()
-    ys, xs = np.where(source)
-    for y, x in zip(ys, xs):
-        dq.append((y, x))
-    seen = source.copy()
-    while dq:
-        y, x = dq.popleft()
-        for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-            ny, nx = y + dy, x + dx
-            if not (0 <= ny < S and 0 <= nx < S):
-                continue
-            if seen[ny, nx]:
-                continue
-            seen[ny, nx] = True
-            if todo[ny, nx]:
-                out[ny, nx] = out[y, x]
-            dq.append((ny, nx))
-    return out
-
-
 def _wipe_eyes(img):
-    """Clear the black bars (and their glints) back to the film around them."""
+    """Lift the black bars, their glint and the keyline back out of the film.
+
+    The middle of the bubble is hollow now, so wiping means clearing to alpha 0:
+    there is no white film left to grow back over the old eyes.
+    """
     out = img.copy()
     m = A.mask_of(out)
     dark = m & (out[..., :3].astype(np.int16).sum(2) < 320)
@@ -269,10 +320,25 @@ def _wipe_eyes(img):
             ys2, xs2 = ys + dy, xs + dx
             ok = (ys2 >= 0) & (ys2 < S) & (xs2 >= 0) & (xs2 < S)
             dil[ys2[ok], xs2[ok]] = True
-    body = BODY if BODY is not None else m
-    region = dil & body
-    source = m & ~dil
-    return _nearest_fill(out, region, source)
+    out[dil] = 0
+    return out
+
+
+def _keyline(spr):
+    """1px pale keyline under an eye shape so black still reads on the dark LCD."""
+    h, w = spr.shape[:2]
+    big = np.zeros((h + 2, w + 2, 4), np.uint8)
+    big[1:-1, 1:-1] = spr
+    m = A.mask_of(big)
+    grow = m.copy()
+    for dy in (-1, 0, 1):
+        for dx in (-1, 0, 1):
+            ys, xs = np.where(m)
+            ys2, xs2 = ys + dy, xs + dx
+            ok = (ys2 >= 0) & (ys2 < h + 2) & (xs2 >= 0) & (xs2 < w + 2)
+            grow[ys2[ok], xs2[ok]] = True
+    big[grow & ~m] = (*HALO, 255)
+    return big
 
 
 def eyes_open(img, cx=32.0, cy=EYE_CY, gap=EYE_GAP, spr=None):
@@ -282,22 +348,22 @@ def eyes_open(img, cx=32.0, cy=EYE_CY, gap=EYE_GAP, spr=None):
         w = spr_img.shape[1]
         x = int(round(cx + (-1 if i == 0 else 1) * gap - w / 2.0))
         y = int(round(cy - spr_img.shape[0] / 2.0))
-        paint(out, spr_img, x, y)
+        paint(out, _keyline(spr_img), x - 1, y - 1)
     return out
 
 
 def eyes_closed(img, cx=32.0, cy=EYE_CY, curved=True):
     """Eyes shut: the bars wipe away and a short lid line remains."""
     out = _wipe_eyes(img)
-    body = A.mask_of(img)
+    lid = np.zeros((2, 5, 4), np.uint8)
+    for i in range(5):
+        d = 1 if (curved and abs(i - 2) < 2) else 0
+        lid[d, i] = (*EYE, 255)
+    spr = _keyline(lid)
     for sgn in (-1, 1):
-        x0 = int(round(cx + sgn * EYE_GAP))
-        y0 = int(round(cy))
-        for dx in range(-2, 3):
-            d = (1 if abs(dx) < 2 else 0) if curved else 0
-            yy, xx = y0 + d, x0 + dx
-            if 0 <= yy < S and 0 <= xx < S and body[yy, xx]:
-                out[yy, xx] = (*EYE, 255)
+        x = int(round(cx + sgn * EYE_GAP)) - 2
+        y = int(round(cy))
+        paint(out, spr, x - 1, y - 1)
     return out
 
 
@@ -312,7 +378,7 @@ def eyes_narrow(img, cx=32.0, cy=EYE_CY, keep=0.55):
         for sx in (0, part.shape[1] - 1):
             part[-1, sx] = 0
         x = int(round(cx + (-1 if i == 0 else 1) * EYE_GAP - part.shape[1] / 2.0))
-        paint(out, part, x, cut)
+        paint(out, _keyline(part), x - 1, cut - 1)
     return out
 
 
@@ -332,17 +398,13 @@ def strain_eyes(img, cx=32.0, cy=EYE_CY, gap=6.0):
     x0, y0 = int(round(cx)), int(round(cy))
     left = np.array([[c == '#' for c in row] for row in _CHEV])
     for sgn in (-1, 1):                    # -1 = left eye '>', +1 = right '<'
-        spr = left[:, ::-1] if sgn < 0 else left
-        hh, ww = spr.shape
+        arr = left[:, ::-1] if sgn < 0 else left
+        spr = np.zeros(arr.shape + (4,), np.uint8)
+        spr[arr] = (*EYE, 255)
+        hh, ww = arr.shape
         x = int(round(x0 + sgn * gap - ww / 2.0))
         y = y0 - hh // 2
-        for dy in range(hh):
-            for dx in range(ww):
-                if not spr[dy, dx]:
-                    continue
-                yy, xx = y + dy, x + dx
-                if 0 <= yy < S and 0 <= xx < S:
-                    out[yy, xx] = (*EYE, 255)
+        paint(out, _keyline(spr), x - 1, y - 1)
     return out
 
 
@@ -403,6 +465,56 @@ def spark(img, pts):
                 out[yy, xx] = (*SPARK, 255)
         if 0 <= y < S and 0 <= x < S and not m[y, x]:
             out[y, x] = (*c, 255)
+    return out
+
+
+def _drop(img, x0, y0, r=1, col=RIM_SKY):
+    """A tiny hollow droplet: 1px ring, one white fleck when it is 3px wide."""
+    out = img.copy()
+    m = A.mask_of(out)
+    for dy in range(-r, r + 1):
+        for dx in range(-r, r + 1):
+            if r - 0.7 <= math.hypot(dx, dy) <= r + 0.25:
+                x, y = x0 + dx, y0 + dy
+                if 0 <= y < S and 0 <= x < S and not m[y, x]:
+                    out[y, x] = (*col, 255)
+    if r >= 2:
+        x, y = x0 - 1, y0 - 1
+        if 0 <= y < S and 0 <= x < S and not m[y, x]:
+            out[y, x] = (*GLINT, 255)
+    return out
+
+
+def burst(img, cx, cy, r, rays=5):
+    """The `뿅!` moment: rays off the silhouette plus four pastel twinkles."""
+    out = img.copy()
+    for k in range(8):
+        a = math.radians(k * 45 + 22.5)
+        for i in range(rays):
+            rr = r + 1.5 + i
+            x = int(round(cx + rr * math.cos(a)))
+            y = int(round(cy - rr * math.sin(a)))
+            if 0 <= y < S and 0 <= x < S and not out[y, x, 3]:
+                out[y, x] = (*(GLINT if i < 2 else SPARK), 255)
+    for sx, sy, c in ((-1, -1, TINT_MINT), (1, -1, TINT_PINK),
+                      (-1, 1, TINT_LAV), (1, 1, GLINT)):
+        x = int(round(cx + sx * (r + 2) * 0.78))
+        y = int(round(cy + sy * (r + 2) * 0.78))
+        out = _star(out, x, y, c)
+    return out
+
+
+def _star(img, x, y, c, arms=2):
+    """A pastel-centred star with `arms`-long grey rays."""
+    out = img.copy()
+    m = A.mask_of(out)
+    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        for i in range(1, arms + 1):
+            xx, yy = x + dx * i, y + dy * i
+            if 0 <= yy < S and 0 <= xx < S and not m[yy, xx]:
+                out[yy, xx] = (*SPARK, 255)
+    if 0 <= y < S and 0 <= x < S and not m[y, x]:
+        out[y, x] = (*c, 255)
     return out
 
 
@@ -535,31 +647,46 @@ def idle(i):
 
 
 def emotion(i):
-    """Row 2: the bubble tries to become a different consonant every frame."""
-    key = ['ㅂ', 'ㅁ', 'ㅇ', 'ㅍ'][i]
-    f = letter(key)
+    """Row 2: squeeze small -> boil over -> the ㅍ catches with a 뿅! -> pastel ㅍ."""
+    if i == 0:
+        # 힘 주며 작아짐: the bubble pinches in, a few droplets shaken loose
+        f = bubble(32.0, CY, 13.4, 11.9, dots=False)
+        f = A.anchor(f, BASE_Y)
+        f = strain_eyes(f, cy=BASE_Y - 11.9 - 2.0, gap=5.0)
+        f = strain_marks(f, [(15, 32, -1, 0, 3), (49, 36, 1, 0, 3)])
+        f = _drop(f, 44, 24, 1, RIM_LAV)
+        f = _drop(f, 19, 45, 1, RIM_SKY)
+        f = _drop(f, 48, 42, 1, RIM_PINK)
+        return f
+    if i == 1:
+        # 더 쪼그라들며 부글부글: lumpy rim, bubbles boiling up all around
+        f = bubble(32.0, CY, 11.6, 9.6, wob=0.16, phase=0.7, dots=False)
+        f = A.anchor(f, BASE_Y)
+        f = strain_eyes(f, cy=BASE_Y - 9.6 - 2.0, gap=4.5)
+        for x, y, r, c in ((17, 29, 1, RIM_SKY), (46, 25, 1, RIM_MINT),
+                           (50, 34, 2, RIM_LAV), (14, 39, 1, RIM_PINK),
+                           (38, 16, 1, RIM_TOP), (27, 13, 1, RIM_SKY)):
+            f = _drop(f, x, y, r, c)
+        f = strain_marks(f, [(11, 47, -1, 1, 2), (53, 47, 1, 1, 2)])
+        return f
+    if i == 2:
+        # 형태를 갖추며 뿅!: the ㅍ catches and the burst goes off around it
+        f = letter('ㅍ', 27).copy()
+        f = A.anchor(f, BASE_Y)
+        ys, xs = np.where(A.mask_of(f))
+        x0, x1, y0, y1 = xs.min(), xs.max(), ys.min(), ys.max()
+        cx, cy = (x0 + x1) / 2.0, (y0 + y1) / 2.0
+        f = strain_eyes(f, cx=cx, cy=cy + 1.0, gap=4.5)
+        f = burst(f, cx, cy, max(x1 - x0, y1 - y0) / 2.0)
+        return f
+    # 완성: the pastel ㅍ bubble, clear eyes, a sparkle or two
+    f = letter('ㅍ', 36).copy()
+    f = A.anchor(f, BASE_Y)
     ys, xs = np.where(A.mask_of(f))
-    y0, y1 = ys.min(), ys.max()
-    cy = y0 + (y1 - y0) * [0.43, 0.46, 0.47, 0.46][i]
-    f = strain_eyes(f, cy=cy, gap=[6.0, 6.0, 7.0, 6.0][i])
-    # effort: strain lines + sparkles + a sweat drop while it squeezes
-    b = A.mask_of(f)
-    ys, xs = np.where(b)
-    x0, x1, yb0, yb1 = xs.min(), xs.max(), ys.min(), ys.max()
-    marks = {
-        0: [(x0 - 2, yb0 + 5, -1, 0, 3), (x1 + 2, yb0 + 8, 1, 0, 2)],
-        1: [(x0 - 2, yb0 + 7, -1, 0, 3), (x1 + 2, yb0 + 4, 1, 0, 3), (x0 + 6, yb1 + 2, 0, 1, 2)],
-        2: [(x0 - 2, yb0 + 8, -1, -1, 3), (x1 + 2, yb0 + 6, 1, -1, 3), (x1 + 2, y0 + 3, 1, 0, 2)],
-        3: [(x0 - 2, yb0 + 3, -1, -1, 3), (x1 + 2, yb0 + 3, 1, -1, 3),
-            (x0 - 1, yb1 - 2, -1, 1, 2), (x1 + 1, yb1 - 3, 1, 1, 2)],
-    }[i]
-    f = strain_marks(f, marks)
-    if i >= 1:
-        f = sweat(f, x1 + 2, yb0 - 1)
-    if i == 3:
-        f = spark(f, [(x0 - 4, y0 - 3, TINT_MINT), (x1 + 4, y0 + 2, TINT_PINK)])
-    elif i == 2:
-        f = spark(f, [(x1 + 4, y0 - 1, TINT_LAV)])
+    x0, x1, y0, y1 = xs.min(), xs.max(), ys.min(), ys.max()
+    f = eyes_open(f, cx=(x0 + x1) / 2.0, cy=(y0 + y1) / 2.0 + 0.5, gap=6.0)
+    f = spark(f, [(x0 - 3, y0 + 2, TINT_MINT), (x1 + 3, y0 + 6, TINT_PINK),
+                  (x0 + 2, y1 + 3, TINT_LAV)])
     return A.anchor(f, BASE_Y)
 
 
