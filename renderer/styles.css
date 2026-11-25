@@ -1944,3 +1944,92 @@ html.ui-holo .lcd-body.card-prev { animation: cardPrev .44s cubic-bezier(.2, .7,
   60% { opacity: 1; }
   100% { transform: none; opacity: 1; }
 }
+
+/* ================================================================
+   물리 버튼 (장현님 11-25): 최소화 없음, 낮/밤·전원은 기기 윗면에 튀어나온 버튼
+   모든 버튼은 누르면 실제로 꾹 들어갔다 튀어나온다
+   ================================================================ */
+html.ui-holo #winMin { display: none; }
+html.ui-holo .tabctl {
+  top: 46px;
+  height: 22px;
+  width: auto;
+  z-index: 4; /* 본체(.holo-base z5) 뒤: 아랫부분이 몸통에 묻힌다 */
+  gap: 0;
+}
+html.ui-holo .tabctl.tl { left: 52px; }
+html.ui-holo .tabctl.tr { left: 100px; right: auto; }
+html.ui-holo .rail-switch,
+html.ui-holo .win-btn.close {
+  width: 40px;
+  height: 22px;
+  padding: 0 0 6px;
+  border-radius: 6px 6px 0 0;
+  border: 2px solid #15171b;
+  border-bottom: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: 700 10px/1 'Galmuri11', monospace;
+  transition: transform .06s ease-out, filter .06s;
+}
+html.ui-holo .rail-switch {
+  background: linear-gradient(180deg, #8a909a, #4d525b);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45);
+  color: #1b1d22;
+}
+html.ui-holo .rail-switch .rail-track { display: none; }
+html.ui-holo .rail-switch .rail-label { color: #1b1d22; font-size: 10px; }
+html.ui-holo .win-btn.close {
+  background: linear-gradient(180deg, #ff6a55, #c4321f);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45);
+  color: #fff1ec;
+  font-size: 12px;
+}
+html.ui-holo .win-btn.close::before { content: "⏻"; }
+html.ui-holo .win-btn.close { font-size: 0; }
+html.ui-holo .win-btn.close::before { font-size: 12px; }
+html.ui-holo .rail-switch:active,
+html.ui-holo .rail-switch.down,
+html.ui-holo .win-btn.close:active,
+html.ui-holo .win-btn.close.down { transform: translateY(5px); filter: brightness(.85); }
+
+/* 앞면 3버튼: 눌리면 꾹 들어가고(그림자 사라짐) 놓으면 살짝 튕기며 올라온다 */
+html.ui-holo .holo-key { transition: transform .05s ease-out, box-shadow .05s ease-out, filter .05s; }
+html.ui-holo .holo-key:active,
+html.ui-holo .holo-key.down {
+  transform: translateY(3px) scale(.97);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, .45), 0 0 0 #15171b;
+  filter: brightness(.9);
+}
+html.ui-holo .holo-key.ok:active,
+html.ui-holo .holo-key.ok.down { box-shadow: inset 0 2px 4px rgba(0, 0, 0, .4), 0 0 0 #8a3a0c, 0 0 18px rgba(255, 130, 60, .6); }
+html.ui-holo .holo-key.pop,
+html.ui-holo .rail-switch.pop,
+html.ui-holo .win-btn.close.pop { animation: keyPop .16s ease-out; }
+@keyframes keyPop {
+  0% { transform: translateY(3px); }
+  60% { transform: translateY(-1px); }
+  100% { transform: none; }
+}
+/* 전원 아이콘: 폰트 대신 링 + 세로선 */
+html.ui-holo .win-btn.close { position: relative; }
+html.ui-holo .win-btn.close::before {
+  content: "";
+  width: 8px; height: 8px;
+  border: 2px solid #fff1ec;
+  border-top-color: transparent;
+  border-radius: 50%;
+  margin-bottom: 1px;
+}
+html.ui-holo .win-btn.close::after {
+  content: "";
+  position: absolute;
+  left: 50%; top: 2px;
+  width: 2px; height: 7px;
+  transform: translateX(-50%);
+  background: #fff1ec;
+  border-radius: 1px;
+}
+/* 기기 글자 빼기 (장현님 11-25) */
+html.ui-holo .hb-name { display: none; }

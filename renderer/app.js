@@ -1053,3 +1053,22 @@
 
   document.addEventListener('DOMContentLoaded', boot);
 })();
+
+/* 물리 버튼 누름 애니: 누르는 동안 .down, 놓을 때 .pop (마우스·터치·키보드 공통) */
+(function () {
+  const SEL = '.holo-key, .rail-switch, .win-btn.close';
+  const release = (b) => {
+    if (!b.classList.contains('down')) return;
+    b.classList.remove('down');
+    b.classList.remove('pop');
+    void b.offsetWidth;
+    b.classList.add('pop');
+    setTimeout(() => b.classList.remove('pop'), 180);
+  };
+  document.addEventListener('pointerdown', (e) => {
+    const b = e.target.closest(SEL);
+    if (b) b.classList.add('down');
+  });
+  document.addEventListener('pointerup', () => document.querySelectorAll(SEL).forEach(release));
+  document.addEventListener('pointercancel', () => document.querySelectorAll(SEL).forEach(release));
+})();
