@@ -731,16 +731,17 @@ def emotion(i):
 def work(i):
     """Row 3: leans into the job, eyes narrow, pixel sparks fly outside."""
     f = eyes_narrow(BASE)
-    f = A.shear(f, [0.04, 0.07, 0.09, 0.06][i], BASE_Y)
-    f = A.squash(f, [1.0, 0.98, 1.0, 0.99][i], BASE_Y)
+    f = A.shift(f, [0, 2, 3, 1][i], [0, 1, 0, -1][i])
+    f = A.shear(f, [0.05, 0.11, 0.14, 0.08][i], BASE_Y)
+    f = A.squash(f, [1.0, 0.95, 0.93, 0.98][i], BASE_Y)
     b = A.mask_of(f)
     ys, xs = np.where(b)
     x0, x1, y0 = xs.min(), xs.max(), ys.min()
-    f = spark(f, {0: [(x1 + 2, y0 + 12, TINT_MINT)],
-                  1: [(x1 + 2, y0 + 8, TINT_MINT), (x1 + 3, y0 + 16, TINT_PINK)],
-                  2: [(x0 - 3, y0 + 10, TINT_PINK), (x1 + 3, y0 + 7, TINT_LAV),
-                      (x1 + 2, y0 + 18, TINT_MINT)],
-                  3: [(x0 - 3, y0 + 6, TINT_LAV), (x1 + 2, y0 + 14, TINT_PINK)]}[i])
+    f = spark(f, {0: [(x1 + 2, y0 + 10, TINT_MINT), (x1 + 4, y0 + 6, TINT_PINK)],
+                  1: [(x1 + 2, y0 + 7, TINT_MINT), (x1 + 4, y0 + 15, TINT_PINK)],
+                  2: [(x0 - 3, y0 + 9, TINT_PINK), (x1 + 3, y0 + 6, TINT_LAV),
+                      (x1 + 3, y0 + 17, TINT_MINT)],
+                  3: [(x0 - 3, y0 + 5, TINT_LAV), (x1 + 3, y0 + 13, TINT_PINK)]}[i])
     return A.anchor(f, BASE_Y)
 
 
