@@ -90,7 +90,7 @@
       const dim = sheetDim(id);
       if (dim.h >= 256) {
         const k = size / 128;
-        const cols = Math.max(1, Math.floor(dim.w / 128));
+        const cols = Math.min(4, Math.max(1, Math.floor(dim.w / 128))); // 아바타는 대기·작업·잠만 → 4칸
         node.style.backgroundSize = `${dim.w * k}px ${dim.h * k}px`;
         node.style.backgroundPosition = `${-(step % cols) * size}px ${-gridRows[anim] * size}px`;
       } else {

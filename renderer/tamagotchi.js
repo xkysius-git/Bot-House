@@ -657,7 +657,9 @@
   function isGrid(img) { return !!img && img.height >= 256; }
   function cellOf(img, anim, step) {
     if (isGrid(img)) {
-      const cols = Math.max(1, Math.floor(img.width / GRID_CELL));
+      // 감정 줄만 8칸까지 쓸 수 있고, 대기·작업·잠·걷기는 4칸 (시트가 8열이어도 앞 4칸만)
+      const all = Math.max(1, Math.floor(img.width / GRID_CELL));
+      const cols = anim === 'emotion' ? all : Math.min(4, all);
       const row = GRID_ROWS[anim] !== undefined ? GRID_ROWS[anim] : 0;
       return { sx: (step % cols) * GRID_CELL, sy: row * GRID_CELL, s: GRID_CELL, grid: true };
     }
