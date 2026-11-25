@@ -620,6 +620,9 @@
     g.restore();
   }
 
+  // 방 캐릭터에 홀로그램 효과를 입힐지 (꺼 둠: 효과는 홀로그램 화면 UI에만)
+  const ROOM_HOLO = false;
+
   function holoFlicker(actor, now) {
     // 가끔 깜빡이고, 아주 가끔 가로로 어긋난다
     if (now > actor.glitchUntil && Math.random() < 0.004) actor.glitchUntil = now + 90 + Math.random() * 120;
@@ -653,6 +656,18 @@
     }
     h.drawImage(sp.img, sp.sx, sp.sy, sp.s, sp.s, 0, 0, size, size);
     h.setTransform(1, 0, 0, 1, 0, 0);
+    if (!ROOM_HOLO) {
+      // 방 캐릭터는 홀로그램 효과 없이 원래 색 그대로 (장현님 11-25: 효과는 홀로그램 화면에만)
+      const px = Math.round(v.dpr * v.ox + lx * k);
+      const py = Math.round(v.dpr * v.oy + ly * k);
+      g.save();
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.imageSmoothingEnabled = false;
+      g.drawImage(c, px, py);
+      g.restore();
+      drawActorExtras(actor, g, ly);
+      return;
+    }
     // 홀로그램 색: 원래 색을 살리고 청록빛을 얹는다
     h.globalCompositeOperation = 'source-atop';
     h.globalAlpha = sleeping ? 0.45 : 0.26;
@@ -698,7 +713,10 @@
       g.drawImage(c, dx, dy);
     }
     g.restore();
+    drawActorExtras(actor, g, ly);
+  }
 
+  function drawActorExtras(actor, g, ly) {
     if (actor.def.id === state.selected) {
       g.save();
       g.strokeStyle = 'rgba(255, 122, 89, .9)';
@@ -762,7 +780,7 @@
     drawMonitors(now);
 
     const actors = Array.from(state.actors.values()).sort((a, b) => a.y - b.y);
-    for (const actor of actors) drawProjector(actor, now);
+    if (ROOM_HOLO) for (const actor of actors) drawProjector(actor, now);
     for (const actor of actors) drawHologram(actor, now);
     drawParticles(dt);
   }

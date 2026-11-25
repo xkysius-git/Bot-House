@@ -1595,20 +1595,23 @@ html.ui-holo .holo-fx {
   inset: 0;
   pointer-events: none;
   z-index: 20;
-  background:
-    repeating-linear-gradient(0deg, rgba(0, 10, 25, .26) 0 1px, transparent 1px 3px),
-    linear-gradient(180deg, var(--holo-tint), rgba(70, 230, 255, .04));
-  mix-blend-mode: screen;
-  animation: scanScroll .9s linear infinite;
+  /* 캐릭터와 같은 세기: 청록 덧칠 .26 (주사선은 .lcd 마스크로 실제로 뚫는다) */
+  background: rgba(70, 230, 255, .2);
 }
-@keyframes scanScroll { to { background-position: 0 3px, 0 0; } }
+/* 주사선: 캐릭터처럼 가로줄을 42% 뚫고 아래로 흐르게 */
+html.ui-holo .lcd {
+  -webkit-mask-image: repeating-linear-gradient(0deg, rgba(0, 0, 0, .58) 0 1px, #000 1px 3px);
+  -webkit-mask-size: 100% 3px;
+  animation: holoFlicker 4.7s steps(1) infinite, scanScroll .27s steps(3) infinite;
+}
+@keyframes scanScroll { to { -webkit-mask-position: 0 3px; } }
 .holo-band {
   position: absolute;
   left: 0; right: 0;
-  height: 9%;
+  height: 8%;
   top: -10%;
-  background: linear-gradient(180deg, transparent, rgba(220, 250, 255, .22), transparent);
-  animation: bandSweep 3.6s linear infinite;
+  background: rgba(255, 255, 255, .35);
+  animation: bandSweep 1.6s linear infinite;
 }
 @keyframes bandSweep { to { top: 110%; } }
 .holo-slice {
@@ -1620,19 +1623,22 @@ html.ui-holo .holo-fx {
   box-shadow: 0 0 0 1px rgba(140, 240, 255, .25);
   opacity: 0;
 }
+/* 캐릭터 깜빡임과 같은 범위 (0.82~0.90) */
 @keyframes holoFlicker {
-  0%, 100% { opacity: .96; }
-  7% { opacity: .9; }
-  8% { opacity: .98; }
-  52% { opacity: .93; }
-  53% { opacity: 1; }
-  81% { opacity: .88; }
-  82% { opacity: .97; }
+  0%, 100% { opacity: .88; }
+  7% { opacity: .82; }
+  8% { opacity: .9; }
+  52% { opacity: .84; }
+  53% { opacity: .9; }
+  81% { opacity: .82; }
+  82% { opacity: .88; }
 }
-/* 글리치 순간: 화면이 가로로 썰린 듯 어긋남 (app.js가 몇 초마다 켠다) */
+/* 글리치 순간: 캐릭터처럼 흐려지고(.45) 가로로 썰린 듯 어긋남 (app.js가 몇 초마다 켠다) */
 html.ui-holo .screen.glitch .lcd {
   transform: translateX(var(--glitch-x, 3px)) skewX(-1.2deg);
   filter: hue-rotate(-18deg) saturate(1.4);
+  opacity: .45 !important;
+  animation-play-state: paused;
 }
 html.ui-holo .screen.glitch .holo-slice { opacity: 1; transform: translateX(calc(var(--glitch-x, 3px) * -3)); }
 
