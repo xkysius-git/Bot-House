@@ -1,0 +1,84 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#2a2d33}canvas{display:block}</style></head><body>
+<pre id="out" style="display:none"></pre>
+<script>
+// 기기 원본 이미지를 부품 레이어로 분리: 배경 투명화 + 키 3개/상단 버튼 2개 마스크 + 본체(키 자리 홈 채움)
+// ?src=파일 &mode=debug|export
+const q = new URLSearchParams(location.search), SRC = q.get('src') || 'v19-1.png', MSRC = q.get('mask') || 'v19-1.png', MODE = q.get('mode') || 'debug';
+const PARTS = {
+  keyL:  { box: [282, 650, 500, 1100], seed: [395, 870] },
+  keyR:  { box: [752, 650, 972, 1100], seed: [860, 870] },
+  keyOK: { box: [486, 742, 766, 1060], seed: [560, 950] },
+  btnA:  { box: [455, 112, 655, 172], seed: [500, 132] },
+  btnB:  { box: [700, 112, 872, 172], seed: [745, 132] },
+};
+const img = new Image(), mimg = new Image(); let n = 0; img.src = SRC; mimg.src = MSRC; img.onload = mimg.onload = () => { if (++n === 2) run(); };
+function run() {
+  const W = img.width, H = img.height, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const cx = cv.getContext('2d'); cx.drawImage(mimg, 0, 0); const mid = cx.getImageData(0, 0, W, H);
+  cx.drawImage(img, 0, 0); const id = cx.getImageData(0, 0, W, H), px = id.data, d = mid.data; // d = 마스크 계산용(건메탈), px = 실제 색
+  const lum = (i) => (d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11);
+  // 1) 배경: 테두리에서 시작해 배경색과 가까운 픽셀을 flood → 투명
+  const bg = [d[0], d[1], d[2]], near = (i, t) => Math.abs(d[i] - bg[0]) + Math.abs(d[i + 1] - bg[1]) + Math.abs(d[i + 2] - bg[2]) < t;
+  const isBg = new Uint8Array(W * H), st = [];
+  for (let x = 0; x < W; x++) st.push(x, (H - 1) * W + x); for (let y = 0; y < H; y++) st.push(y * W, y * W + W - 1);
+  while (st.length) { const p = st.pop(); if (isBg[p] || !near(p * 4, 20)) continue; isBg[p] = 1; const x = p % W, y = (p / W) | 0;
+    if (x > 0) st.push(p - 1); if (x < W - 1) st.push(p + 1); if (y > 0) st.push(p - W); if (y < H - 1) st.push(p + W); }
+  // 2) 부품 마스크: 씨앗에서 '중간 어두움'(홈보다 밝고 테두리 하이라이트보다 어두움) 픽셀로 flood → 구멍 채움 → 팽창
+  const masks = {};
+  for (const [name, P] of Object.entries(PARTS)) {
+    const [x0, y0, x1, y1] = P.box, w = x1 - x0, h = y1 - y0, m = new Uint8Array(w * h);
+    const s0 = (P.seed[1] * W + P.seed[0]) * 4, base = lum(s0), lo = base - 22, hi = base + 26; const s = [(P.seed[1] - y0) * w + (P.seed[0] - x0)];
+    while (s.length) { const p = s.pop(); if (m[p]) continue; const x = p % w, y = (p / w) | 0, L = lum(((y + y0) * W + x + x0) * 4); if (L < lo || L > hi) continue; m[p] = 1;
+      if (x > 0) s.push(p - 1); if (x < w - 1) s.push(p + 1); if (y > 0) s.push(p - w); if (y < h - 1) s.push(p + w); }
+    // 구멍 채움: bbox 테두리에서 마스크 밖으로 닿지 않는 곳 = 내부
+    const out = new Uint8Array(w * h), s2 = []; for (let x = 0; x < w; x++) s2.push(x, (h - 1) * w + x); for (let y = 0; y < h; y++) s2.push(y * w, y * w + w - 1);
+    while (s2.length) { const p = s2.pop(); if (out[p] || m[p]) continue; out[p] = 1; const x = p % w, y = (p / w) | 0; if (x > 0) s2.push(p - 1); if (x < w - 1) s2.push(p + 1); if (y > 0) s2.push(p - w); if (y < h - 1) s2.push(p + w); }
+    for (let i = 0; i < w * h; i++) if (!out[i]) m[i] = 1;
+    // 팽창 (가장자리 베벨 포함)
+    const R = name.startsWith('btn') ? 2 : +(q.get('dil') || 6), dm = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { if (!m[y * w + x]) continue; for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) { if (dx * dx + dy * dy > R * R) continue; const X = x + dx, Y = y + dy; if (X >= 0 && Y >= 0 && X < w && Y < h) dm[Y * w + X] = 1; } }
+    masks[name] = { x0, y0, w, h, m: dm };
+  }
+  // 3) 기호·발광선 분리: 부품 안쪽(가장자리 베벨 제외)에서 면 색과 다른 픽셀 → 표시 레이어로 떼고, 원본은 주변 면 색으로 메움
+  const orig = new Uint8ClampedArray(px), marks = {};
+  const erode = (m, w, h, E) => { let a = m; for (const horiz of [1, 0]) { const b = new Uint8Array(w * h); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { let ok = 1; for (let t = -E; t <= E && ok; t++) { const X = horiz ? x + t : x, Y = horiz ? y : y + t; if (X < 0 || Y < 0 || X >= w || Y >= h || !a[Y * w + X]) ok = 0; } b[y * w + x] = ok; } a = b; } return a; };
+  if (q.get('marks') !== '0') for (const [name, k] of Object.entries(masks)) {
+    const btn = name.startsWith('btn'), reg = btn ? new Uint8Array(k.w * k.h).fill(1) : k.m, inner = erode(reg, k.w, k.h, btn ? 3 : 16), Ls = [], at = (x, y) => ((y + k.y0) * W + x + k.x0) * 4;
+    for (let y = 0; y < k.h; y++) for (let x = 0; x < k.w; x++) if (inner[y * k.w + x]) Ls.push(lum(at(x, y)) * 0 + (px[at(x, y)] * .3 + px[at(x, y) + 1] * .59 + px[at(x, y) + 2] * .11));
+    Ls.sort((a, b) => a - b); const med = Ls[Ls.length >> 1] || 0; let sr = 0, sg = 0, sb = 0, sn = 0;
+    for (let y = 0; y < k.h; y++) for (let x = 0; x < k.w; x++) { if (!inner[y * k.w + x]) continue; const i = at(x, y), L = px[i] * .3 + px[i + 1] * .59 + px[i + 2] * .11; if (Math.abs(L - med) < 10) { sr += px[i]; sg += px[i + 1]; sb += px[i + 2]; sn++; } }
+    const ref = [sr / sn, sg / sn, sb / sn], mk = new Uint8Array(k.w * k.h);
+    for (let y = 0; y < k.h; y++) for (let x = 0; x < k.w; x++) { if (!inner[y * k.w + x]) continue; const i = at(x, y), r = px[i], g = px[i + 1], b = px[i + 2], L = r * .3 + g * .59 + b * .11;
+      const chroma = Math.abs(r - ref[0]) + Math.abs(g - ref[1]) + Math.abs(b - ref[2]), sat = Math.max(r, g, b) - Math.min(r, g, b);
+      if (btn ? (sat > 45 && L > 45) : (Math.abs(L - med) > 22 || chroma > 38)) mk[y * k.w + x] = 1; }
+    // 표시 마스크 팽창 2px (번짐 포함)
+    const R = btn ? 2 : name === 'keyOK' ? 10 : 4, md = new Uint8Array(k.w * k.h);
+    for (let y = 0; y < k.h; y++) for (let x = 0; x < k.w; x++) { if (!mk[y * k.w + x]) continue; for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) { const X = x + dx, Y = y + dy; if (X >= 0 && Y >= 0 && X < k.w && Y < k.h && inner[Y * k.w + X]) md[Y * k.w + X] = 1; } }
+    // 바깥에서 안으로 한 겹씩 주변 평균으로 메움
+    let unknown = md.slice(), left = unknown.reduce((a, b) => a + b, 0);
+    while (left > 0) { const fill = []; for (let y = 0; y < k.h; y++) for (let x = 0; x < k.w; x++) { if (!unknown[y * k.w + x]) continue; let r = 0, g = 0, b = 0, n = 0;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) { const X = x + dx, Y = y + dy; if (X < 0 || Y < 0 || X >= k.w || Y >= k.h || unknown[Y * k.w + X] || !reg[Y * k.w + X]) continue; const i = at(X, Y); r += px[i]; g += px[i + 1]; b += px[i + 2]; n++; }
+        if (n) fill.push([x, y, r / n, g / n, b / n]); }
+      if (!fill.length) break; for (const [x, y, r, g, b] of fill) { const i = at(x, y); px[i] = r; px[i + 1] = g; px[i + 2] = b; unknown[y * k.w + x] = 0; left--; } }
+    marks[name] = { ...k, m: md };
+  }
+  if (MODE === 'debug') {
+    const dd = px; for (let p = 0; p < W * H; p++) if (isBg[p]) { dd[p * 4] = 255; dd[p * 4 + 1] = 0; dd[p * 4 + 2] = 255; }
+    const col = { keyL: [255, 80, 0], keyR: [0, 200, 255], keyOK: [0, 255, 80], btnA: [255, 255, 0], btnB: [255, 0, 120] };
+    if (q.get('tint') !== '0') for (const [n, k] of Object.entries(masks)) for (let y = 0; y < k.h; y++) for (let x = 0; x < k.w; x++) if (k.m[y * k.w + x]) { const i = ((y + k.y0) * W + x + k.x0) * 4; px[i] = (px[i] + col[n][0]) / 2; px[i + 1] = (px[i + 1] + col[n][1]) / 2; px[i + 2] = (px[i + 2] + col[n][2]) / 2; }
+    cx.putImageData(id, 0, 0); cv.style.width = '627px'; document.body.appendChild(cv); document.title = 'done'; return;
+  }
+  // export: 부품 PNG + 본체(배경 투명, 부품 자리는 어두운 홈 색) + 좌표 JSON
+  const outs = {}, meta = { W: Math.round(W * (+(q.get('scale') || 0.5))), H: Math.round(H * (+(q.get('scale') || 0.5))), parts: {} };
+  const SC = +(q.get('scale') || 0.5); const toPng = (w, h, fill) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'), o = g.createImageData(w, h); fill(o.data); g.putImageData(o, 0, 0); const c2 = document.createElement('canvas'); c2.width = Math.round(w * SC); c2.height = Math.round(h * SC); const g2 = c2.getContext('2d'); g2.imageSmoothingQuality = 'high'; g2.drawImage(c, 0, 0, c2.width, c2.height); return c2.toDataURL('image/png').split(',')[1]; };
+  for (const [n, k] of Object.entries(masks)) {
+    outs[n] = toPng(k.w, k.h, (o) => { for (let y = 0; y < k.h; y++) for (let x = 0; x < k.w; x++) { const j = (y * k.w + x) * 4, i = ((y + k.y0) * W + x + k.x0) * 4; o[j] = px[i]; o[j + 1] = px[i + 1]; o[j + 2] = px[i + 2]; o[j + 3] = k.m[y * k.w + x] ? 255 : 0; } });
+    meta.parts[n] = { x: Math.round(k.x0 * SC), y: Math.round(k.y0 * SC), w: Math.round(k.w * SC), h: Math.round(k.h * SC) };
+    const mk = marks[n]; if (mk) // 표시 레이어 (원래 기호·발광선, 같은 크롭 좌표)
+    outs[n + 'Mark'] = toPng(k.w, k.h, (o) => { for (let y = 0; y < k.h; y++) for (let x = 0; x < k.w; x++) { const j = (y * k.w + x) * 4, i = ((y + k.y0) * W + x + k.x0) * 4; o[j] = orig[i]; o[j + 1] = orig[i + 1]; o[j + 2] = orig[i + 2]; o[j + 3] = mk.m[y * k.w + x] ? 255 : 0; } });
+  }
+  outs.body = toPng(W, H, (o) => { for (let p = 0; p < W * H; p++) { const i = p * 4; o[i] = px[i]; o[i + 1] = px[i + 1]; o[i + 2] = px[i + 2]; o[i + 3] = isBg[p] ? 0 : 255; }
+    if (q.get('recess') !== '0') for (const k of Object.values(masks)) for (let y = 0; y < k.h; y++) for (let x = 0; x < k.w; x++) if (k.m[y * k.w + x]) { const i = ((y + k.y0) * W + x + k.x0) * 4; o[i] = 10; o[i + 1] = 11; o[i + 2] = 14; } });
+  document.getElementById('out').textContent = JSON.stringify({ meta, outs }); document.title = 'done';
+}
+</script></body></html>

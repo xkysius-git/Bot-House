@@ -1,0 +1,26 @@
+<!doctype html><html><head><meta charset="utf-8"></head><body>
+<pre id="out" style="display:none"></pre>
+<script>
+// 피클 부품 PNG(1254 판, 전체 크기 투명)를 알파 영역만 잘라 0.5배로 줄이고 좌표를 뽑음
+// ?dir=../app_assets2/gunmetal
+const q = new URLSearchParams(location.search), DIR = q.get('dir'), SC = 0.5;
+const MAP = { body: 'body', keyL: 'key_left', keyOK: 'key_mid', keyR: 'key_right', btnA: 'btn_top_l', btnB: 'btn_top_r', keyLGlow: 'led_key_left', keyOKGlow: 'led_key_mid', keyRGlow: 'led_key_right' };
+const names = Object.keys(MAP), imgs = {}; let n = 0;
+for (const k of names) { const im = new Image(); im.onload = () => { if (++n === names.length) run(); }; im.src = `${DIR}/${MAP[k]}.png`; imgs[k] = im; }
+function run() {
+  const out = {}, meta = {};
+  for (const k of names) {
+    const im = imgs[k], W = im.width, H = im.height, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'); g.drawImage(im, 0, 0);
+    const d = g.getImageData(0, 0, W, H).data; let x0 = W, y0 = H, x1 = -1, y1 = -1;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (d[(y * W + x) * 4 + 3] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    if (k === 'body') { x0 = 0; y0 = 0; x1 = W - 1; y1 = H - 1; }
+    const BX = q.get('boxes') ? JSON.parse(q.get('boxes')) : null; if (BX && BX[k]) { [x0, y0, x1, y1] = BX[k]; }
+    x0 = Math.max(0, x0 - 2) & ~1; y0 = Math.max(0, y0 - 2) & ~1; const w = Math.min(W, x1 + 3) - x0, h = Math.min(H, y1 + 3) - y0;
+    const c2 = document.createElement('canvas'); c2.width = Math.round(w * SC); c2.height = Math.round(h * SC); const g2 = c2.getContext('2d'); g2.imageSmoothingQuality = 'high';
+    g2.drawImage(c, x0, y0, w, h, 0, 0, c2.width, c2.height);
+    out[k] = c2.toDataURL('image/png').split(',')[1];
+    meta[k] = { x: Math.round(x0 * SC), y: Math.round(y0 * SC), w: c2.width, h: c2.height };
+  }
+  document.getElementById('out').textContent = JSON.stringify({ meta, out }); document.title = 'done';
+}
+</script></body></html>

@@ -1,0 +1,29 @@
+<!doctype html><html><head><meta charset="utf-8"></head><body>
+<pre id="out" style="display:none"></pre>
+<script>
+// 키 둘레 발광(v21)을 키별 레이어로 분리: v21 - v20 밝기 차이 = 발광. 본체는 키 주변만 v20(꺼진 상태)로 되돌림
+// ?off=v20-1.png&on=v21-1.png&scale=0.5
+const q = new URLSearchParams(location.search), SC = +(q.get('scale') || 0.5);
+const BOX = { keyL: [262, 630, 520, 1120], keyR: [732, 630, 992, 1120], keyOK: [470, 726, 782, 1076] };
+const a = new Image(), b = new Image(); let n = 0; a.src = q.get('off'); b.src = q.get('on'); a.onload = b.onload = () => { if (++n === 2) run(); };
+function run() {
+  const W = a.width, H = a.height, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+  g.drawImage(a, 0, 0); const off = g.getImageData(0, 0, W, H).data; g.drawImage(b, 0, 0); const onI = g.getImageData(0, 0, W, H), on = onI.data;
+  const L = (d, i) => d[i] * .3 + d[i + 1] * .59 + d[i + 2] * .11;
+  const out = {}, meta = {};
+  const png = (w, h, fill) => { const c1 = document.createElement('canvas'); c1.width = w; c1.height = h; const g1 = c1.getContext('2d'), o = g1.createImageData(w, h); fill(o.data); g1.putImageData(o, 0, 0);
+    const c2 = document.createElement('canvas'); c2.width = Math.round(w * SC); c2.height = Math.round(h * SC); const g2 = c2.getContext('2d'); g2.imageSmoothingQuality = 'high'; g2.drawImage(c1, 0, 0, c2.width, c2.height); return c2.toDataURL('image/png').split(',')[1]; };
+  const comp = new Uint8ClampedArray(on);
+  for (const [k, [x0, y0, x1, y1]] of Object.entries(BOX)) {
+    const w = x1 - x0, h = y1 - y0;
+    out[k + 'Glow'] = png(w, h, (o) => { for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = ((y + y0) * W + x + x0) * 4, j = (y * w + x) * 4, dL = L(on, i) - L(off, i);
+      const al = Math.max(0, Math.min(255, (dL - 6) * 5)); o[j] = on[i]; o[j + 1] = on[i + 1]; o[j + 2] = on[i + 2]; o[j + 3] = al; } });
+    meta[k + 'Glow'] = { x: Math.round(x0 * SC), y: Math.round(y0 * SC), w: Math.round(w * SC), h: Math.round(h * SC) };
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const i = (y * W + x) * 4; comp[i] = off[i]; comp[i + 1] = off[i + 1]; comp[i + 2] = off[i + 2]; }
+  }
+  // 합성본(키 주변은 꺼진 상태, 나머지 LED는 켜진 상태) → split.html 의 src 로 씀
+  const cc = document.createElement('canvas'); cc.width = W; cc.height = H; cc.getContext('2d').putImageData(new ImageData(comp, W, H), 0, 0);
+  out.composite = cc.toDataURL('image/png').split(',')[1];
+  document.getElementById('out').textContent = JSON.stringify({ meta, out }); document.title = 'done';
+}
+</script></body></html>

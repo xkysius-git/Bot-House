@@ -582,7 +582,9 @@
       body.classList.remove('card-next', 'card-prev');
       void body.offsetWidth;
       body.classList.add(`card-${dir}`);
-      setTimeout(() => body.classList.remove(`card-${dir}`), 460);
+      const scr = document.querySelector('.screen');
+      if (scr) { scr.classList.remove('stack-next', 'stack-prev'); void scr.offsetWidth; scr.classList.add(`stack-${dir}`); }
+      setTimeout(() => { body.classList.remove(`card-${dir}`); if (scr) scr.classList.remove(`stack-${dir}`); }, 460);
     }
     document.querySelectorAll('#viewSwitch button').forEach((b) => {
       b.classList.toggle('on', b.dataset.view === app.view);
@@ -1056,7 +1058,7 @@
 
 /* 물리 버튼 누름 애니: 누르는 동안 .down, 놓을 때 .pop (마우스·터치·키보드 공통) */
 (function () {
-  const SEL = '.holo-key, .rail-switch, .win-btn.close';
+  const SEL = '.holo-key, .hb-top, .rail-switch, .win-btn.close';
   const release = (b) => {
     if (!b.classList.contains('down')) return;
     b.classList.remove('down');
@@ -1071,4 +1073,59 @@
   });
   document.addEventListener('pointerup', () => document.querySelectorAll(SEL).forEach(release));
   document.addEventListener('pointercancel', () => document.querySelectorAll(SEL).forEach(release));
+})();
+
+/* 레이어 기기 (장현님 11-26): 오이지 아트 크롭 레이어. 색 4종은 기기 우클릭으로 바꾸고 기억 */
+(function () {
+  const root = document.documentElement, KEY = 'aimon.deviceColor', COLORS = ['gunmetal', 'obsidian', 'arctic', 'cobalt'];
+  let c = 'gunmetal';
+  try { const s = localStorage.getItem(KEY); if (COLORS.includes(s)) c = s; } catch (e) { /* 저장소 없으면 기본색 */ }
+  root.classList.add('dev-art');
+  root.dataset.dev = c;
+  const nextColor = () => {
+    c = COLORS[(COLORS.indexOf(c) + 1) % COLORS.length];
+    root.dataset.dev = c;
+    try { localStorage.setItem(KEY, c); } catch (err) { /* 무시 */ }
+  };
+  // 윗면 버튼: 짧게 = 기본 동작, 길게(0.6초) = 보조 동작
+  document.querySelectorAll('.hb-top').forEach((b) => {
+    let timer = 0, long = false;
+    b.addEventListener('pointerdown', () => { long = false; timer = setTimeout(() => {
+      long = true;
+      if (b.dataset.act === 'power') { const q = document.getElementById('winClose'); if (q) q.click(); }
+      else nextColor();
+    }, 600); });
+    const cancel = () => clearTimeout(timer);
+    b.addEventListener('pointerleave', cancel);
+    b.addEventListener('pointercancel', cancel);
+    b.addEventListener('click', () => {
+      clearTimeout(timer);
+      if (long) return;
+      if (b.dataset.act === 'power') root.classList.toggle('holo-off');
+      else { const t = document.getElementById('themeBtn'); if (t) t.click(); }
+    });
+  });
+  // 기기 LCD: 홀로그램 탭과 같이 바뀌는 아이콘·이름·쪽 점
+  const tabs = [...document.querySelectorAll('#holoTabs .holo-tab')];
+  const icon = document.getElementById('hbLcdIcon'), label = document.getElementById('hbLcdLabel'), dots = document.getElementById('hbLcdDots');
+  const LCD_NAME = { room: 'ROOM', characters: 'MONS', usage: 'USAGE', settings: 'SETUP' };
+  const paintLcd = () => {
+    const i = Math.max(0, tabs.findIndex((t) => t.classList.contains('on')));
+    const t = tabs[i];
+    if (!t || !icon) return;
+    const svg = t.querySelector('svg').outerHTML.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+    icon.style.setProperty('--lcd-icon', 'url("data:image/svg+xml;utf8,' + encodeURIComponent(svg) + '")');
+    icon.dataset.tab = t.dataset.tab;
+    label.textContent = LCD_NAME[t.dataset.tab] || t.dataset.tab.toUpperCase();
+    dots.innerHTML = tabs.map((_, k) => '<i' + (k === i ? ' class="on"' : '') + '></i>').join('');
+  };
+  paintLcd();
+  tabs.forEach((t) => new MutationObserver(paintLcd).observe(t, { attributes: true, attributeFilter: ['class'] }));
+  const base = document.getElementById('holoBase');
+  if (base) base.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    c = COLORS[(COLORS.indexOf(c) + 1) % COLORS.length];
+    root.dataset.dev = c;
+    try { localStorage.setItem(KEY, c); } catch (err) { /* 무시 */ }
+  });
 })();

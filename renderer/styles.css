@@ -1916,7 +1916,7 @@ html.ui-holo .tabctl { top: 14px; bottom: auto; }
 html.ui-holo .tabctl.tl { left: 26px; width: 80px; }
 html.ui-holo .tabctl.tr { left: auto; right: 18px; width: 60px; }
 
-/* 카드 스택: 화면 뒤에 겹친 카드 2장 + 탭 전환 때 카드가 돌며 넘어감 */
+/* 카드 스택 (장현님 11-26): 이전·다음 창이 화면 위아래로 겹쳐 쌓여 보이고, 전환 때 가로축으로 돌며 넘어감 */
 html.ui-holo .screen::before,
 html.ui-holo .screen::after {
   content: "";
@@ -1928,19 +1928,27 @@ html.ui-holo .screen::after {
   box-shadow: inset 0 0 0 1.5px rgba(127, 230, 255, .45);
   z-index: -1;
 }
-html.ui-holo .screen::before { transform: translate(10px, -8px) scale(.97); opacity: .7; }
-html.ui-holo .screen::after { transform: translate(20px, -16px) scale(.94); opacity: .4; }
-html.ui-holo .lcd { perspective: 900px; }
+html.ui-holo .screen::before { transform: translateY(-14px) scale(.955); opacity: .7; }
+html.ui-holo .screen::after { transform: translateY(14px) scale(.955); opacity: .5; }
+/* 전환 순간 쌓인 카드도 한 칸씩 밀려 돈다 */
+html.ui-holo .screen.stack-next::after { animation: stackUp .44s cubic-bezier(.2, .7, .2, 1); }
+html.ui-holo .screen.stack-next::before { animation: stackFade .44s ease-out; }
+html.ui-holo .screen.stack-prev::before { animation: stackDown .44s cubic-bezier(.2, .7, .2, 1); }
+html.ui-holo .screen.stack-prev::after { animation: stackFade .44s ease-out; }
+@keyframes stackUp { 0% { transform: translateY(40px) scale(.9); opacity: 0; } 100% { transform: translateY(14px) scale(.955); opacity: .5; } }
+@keyframes stackDown { 0% { transform: translateY(-40px) scale(.9); opacity: 0; } 100% { transform: translateY(-14px) scale(.955); opacity: .7; } }
+@keyframes stackFade { 0% { opacity: 1; } 40% { opacity: .2; } 100% { opacity: .6; } }
+html.ui-holo .lcd { perspective: 700px; }
 html.ui-holo .lcd-body { transform-origin: 50% 50%; backface-visibility: hidden; }
 html.ui-holo .lcd-body.card-next { animation: cardNext .44s cubic-bezier(.2, .7, .2, 1); }
 html.ui-holo .lcd-body.card-prev { animation: cardPrev .44s cubic-bezier(.2, .7, .2, 1); }
 @keyframes cardNext {
-  0% { transform: translate(18%, -6%) rotateY(-58deg) scale(.86); opacity: 0; }
+  0% { transform: translateY(32%) rotateX(-72deg) scale(.88); opacity: 0; }
   60% { opacity: 1; }
   100% { transform: none; opacity: 1; }
 }
 @keyframes cardPrev {
-  0% { transform: translate(-18%, -6%) rotateY(58deg) scale(.86); opacity: 0; }
+  0% { transform: translateY(-32%) rotateX(72deg) scale(.88); opacity: 0; }
   60% { opacity: 1; }
   100% { transform: none; opacity: 1; }
 }
@@ -2033,3 +2041,224 @@ html.ui-holo .win-btn.close::after {
 }
 /* 기기 글자 빼기 (장현님 11-25) */
 html.ui-holo .hb-name { display: none; }
+
+/* ================================================================
+   레이어 기기 (장현님 11-26): 오이지 v19 아트를 부품별로 크롭해 쌓음
+   본체 / 왼·가운데·오른 키 / 윗면 버튼 2 / 화면 / 렌즈 — 키·버튼은 실제로 눌림
+   좌표: assets/device/meta.json (627px 판), tools/device-split 로 재생성
+   ================================================================ */
+.hb-art-body, .hb-art-screen, .hb-art-lens, .hb-top { display: none; }
+html.ui-holo.dev-art .holo-base {
+  left: -24px; top: 42px; width: 627px; height: 627px;
+  transform: scale(0.56); transform-origin: 0 0;
+  background: none; clip-path: none; box-shadow: none; border: 0;
+}
+html.ui-holo.dev-art .holo-base::before,
+html.ui-holo.dev-art .holo-base::after,
+html.ui-holo.dev-art .hb-loop,
+html.ui-holo.dev-art .hb-grip, html.ui-holo.dev-art .hb-screw, html.ui-holo.dev-art .hb-vent,
+html.ui-holo.dev-art .hb-strip, html.ui-holo.dev-art .hb-name,
+html.ui-holo.dev-art .holo-emitter,
+html.ui-holo.dev-art .tabctl,
+html.ui-holo.dev-art .holo-key svg { display: none !important; }
+html.ui-holo.dev-art .hb-art-body {
+  display: block; position: absolute; inset: 0; pointer-events: none;
+  background: var(--dev-body) 0 0 / 100% 100% no-repeat;
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, .55));
+}
+html.ui-holo.dev-art .holo-keys { position: absolute; inset: 0; display: block; padding: 0; margin: 0; gap: 0; transform: none; left: 0; top: 0; width: auto; }
+html.ui-holo.dev-art .holo-key,
+html.ui-holo.dev-art .hb-top {
+  display: block; position: absolute; padding: 0; margin: 0; border: 0; border-radius: 0;
+  background-color: transparent; background-repeat: no-repeat; background-size: 100% 100%;
+  box-shadow: none; outline: none; cursor: pointer; min-width: 0; min-height: 0;
+  filter: drop-shadow(0 4px 2px rgba(0, 0, 0, .55));
+  transition: transform .06s ease-out, filter .06s ease-out;
+}
+html.ui-holo.dev-art .holo-key[data-hkey="L"] { left: 141px; top: 325px; width: 109px; height: 225px; background-image: var(--dev-keyL); }
+html.ui-holo.dev-art .holo-key[data-hkey="R"] { left: 376px; top: 325px; width: 110px; height: 225px; background-image: var(--dev-keyR); }
+html.ui-holo.dev-art .holo-key.ok { left: 243px; top: 371px; width: 140px; height: 159px; background-image: var(--dev-keyOK); }
+html.ui-holo.dev-art .hb-top.a { left: 228px; top: 56px; width: 100px; height: 30px; background-image: var(--dev-btnA); }
+html.ui-holo.dev-art .hb-top.b { left: 350px; top: 56px; width: 86px; height: 30px; background-image: var(--dev-btnB); }
+/* 눌림: 홈 속으로 들어가며 그림자가 줄고 살짝 어두워짐, 놓으면 튀어나옴 */
+html.ui-holo.dev-art .holo-key.down { transform: translateY(5px) scale(.975); filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .6)) brightness(.8); }
+html.ui-holo.dev-art .hb-top.down { transform: translateY(4px); filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .6)) brightness(.8); }
+html.ui-holo.dev-art .holo-key.pop, html.ui-holo.dev-art .hb-top.pop { animation: devPop .18s ease-out; }
+@keyframes devPop { 0% { transform: translateY(3px); } 60% { transform: translateY(-1.5px); } 100% { transform: none; } }
+html.ui-holo.dev-art .holo-key.ok.hold { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .6)) brightness(.7); }
+/* 화면: 원본 유리 위 표시층 (지금은 대기 주사선 + 은은한 발광) */
+html.ui-holo.dev-art .hb-art-screen {
+  display: block; position: absolute; left: 196px; top: 129px; width: 235px; height: 201px; pointer-events: none;
+  border-radius: 22px 22px 46px 46px / 22px 22px 60px 60px;
+  background: repeating-linear-gradient(180deg, rgba(255, 255, 255, .035) 0 2px, transparent 2px 6px);
+  box-shadow: inset 0 0 28px color-mix(in srgb, var(--dev-glow) 22%, transparent);
+  animation: devScreen 4s ease-in-out infinite;
+}
+@keyframes devScreen { 0%, 100% { opacity: .55; } 50% { opacity: .9; } }
+/* 렌즈: 투사 중 맥동 */
+html.ui-holo.dev-art .hb-art-lens {
+  display: block; position: absolute; pointer-events: none; border-radius: 50%;
+  left: 483px; top: 206px; width: 74px; height: 74px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--dev-glow) 70%, white) 0 12%, color-mix(in srgb, var(--dev-glow) 45%, transparent) 30%, transparent 68%);
+  mix-blend-mode: screen; animation: devLens 2.4s ease-in-out infinite;
+}
+@keyframes devLens { 0%, 100% { opacity: .55; transform: scale(.94); } 50% { opacity: 1; transform: scale(1.06); } }
+/* 화면·투사 빛: 기기 오른쪽으로 */
+html.ui-holo.dev-art .screen { left: 300px; }
+html.ui-holo.dev-art .holo-cone,
+html.ui-holo.dev-art[data-win="wide"] .holo-cone {
+  left: 270px; top: 54px; width: 32px; height: 300px;
+  clip-path: polygon(0 38%, 100% 0, 100% 100%, 0 46%);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--dev-glow) 60%, transparent), color-mix(in srgb, var(--dev-glow) 6%, transparent));
+}
+html.preview.ui-holo.dev-art .stage { width: 792px; }
+html.preview.ui-holo.dev-art[data-win="wide"] .stage { width: 1152px; }
+html[data-dev="gunmetal"] { --dev-glow: #5fe8ff; --dev-body: url("../assets/device/gunmetal/body.png"); --dev-keyL: url("../assets/device/gunmetal/keyL.png"); --dev-keyR: url("../assets/device/gunmetal/keyR.png"); --dev-keyOK: url("../assets/device/gunmetal/keyOK.png"); --dev-btnA: url("../assets/device/gunmetal/btnA.png"); --dev-btnB: url("../assets/device/gunmetal/btnB.png"); }
+html[data-dev="obsidian"] { --dev-glow: #ffb347; --dev-body: url("../assets/device/obsidian/body.png"); --dev-keyL: url("../assets/device/obsidian/keyL.png"); --dev-keyR: url("../assets/device/obsidian/keyR.png"); --dev-keyOK: url("../assets/device/obsidian/keyOK.png"); --dev-btnA: url("../assets/device/obsidian/btnA.png"); --dev-btnB: url("../assets/device/obsidian/btnB.png"); }
+html[data-dev="arctic"] { --dev-glow: #6fe6ff; --dev-body: url("../assets/device/arctic/body.png"); --dev-keyL: url("../assets/device/arctic/keyL.png"); --dev-keyR: url("../assets/device/arctic/keyR.png"); --dev-keyOK: url("../assets/device/arctic/keyOK.png"); --dev-btnA: url("../assets/device/arctic/btnA.png"); --dev-btnB: url("../assets/device/arctic/btnB.png"); }
+html[data-dev="cobalt"] { --dev-glow: #9a7bff; --dev-body: url("../assets/device/cobalt/body.png"); --dev-keyL: url("../assets/device/cobalt/keyL.png"); --dev-keyR: url("../assets/device/cobalt/keyR.png"); --dev-keyOK: url("../assets/device/cobalt/keyOK.png"); --dev-btnA: url("../assets/device/cobalt/btnA.png"); --dev-btnB: url("../assets/device/cobalt/btnB.png"); }
+
+/* 홀로그램 창 LED 외곽선 (장현님 11-26, 오이지 시안): 둥근 창 + 밝은 LED 라인과 번짐 + 왼쪽 위 탭, 뒤 카드도 약한 LED 라인. 색은 기기 색을 따름 */
+.holo-led { display: none; }
+html.ui-holo .holo-led {
+  display: block; position: absolute; inset: 0; pointer-events: none; z-index: 21;
+  border: 2px solid color-mix(in srgb, var(--dev-glow, #7fe6ff) 85%, white);
+  border-radius: 16px;
+  box-shadow: 0 0 6px var(--dev-glow, #7fe6ff), 0 0 18px color-mix(in srgb, var(--dev-glow, #7fe6ff) 60%, transparent), inset 0 0 14px color-mix(in srgb, var(--dev-glow, #7fe6ff) 40%, transparent);
+  animation: ledPulse 3.2s ease-in-out infinite;
+}
+html.ui-holo .holo-led::before {
+  content: ''; position: absolute; left: 18px; top: -13px; width: 30%; height: 12px;
+  border: 2px solid color-mix(in srgb, var(--dev-glow, #7fe6ff) 85%, white); border-bottom: 0; border-radius: 9px 9px 0 0;
+  background: color-mix(in srgb, var(--dev-glow, #7fe6ff) 14%, transparent);
+  box-shadow: 0 -2px 10px color-mix(in srgb, var(--dev-glow, #7fe6ff) 55%, transparent);
+}
+@keyframes ledPulse { 0%, 100% { opacity: .85; } 50% { opacity: 1; } }
+html.ui-holo .lcd { clip-path: inset(0 round 16px); box-shadow: inset 0 0 26px color-mix(in srgb, var(--dev-glow, #7fe6ff) 28%, transparent); }
+html.ui-holo .screen::before,
+html.ui-holo .screen::after {
+  clip-path: none; border-radius: 16px;
+  border: 1.5px solid color-mix(in srgb, var(--dev-glow, #7fe6ff) 70%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--dev-glow, #7fe6ff) 35%, transparent);
+  background: color-mix(in srgb, var(--dev-glow, #7fe6ff) 8%, transparent);
+}
+html.ui-holo .screen.glitch .holo-led { transform: translateX(var(--glitch-x, 3px)); opacity: .6; }
+@media (prefers-reduced-motion: reduce) { html.ui-holo .holo-led { animation: none; } }
+
+/* 오이지 미리보기 기기 동작 반영 (장현님 11-26) */
+html.ui-holo.dev-art .hb-art-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; transition: opacity .3s ease; }
+.hb-lcd-icon { display: block; width: 44px; height: 44px; background: var(--dev-glow, #7fe6ff); -webkit-mask: var(--lcd-icon) center / contain no-repeat; filter: drop-shadow(0 0 8px var(--dev-glow, #7fe6ff)); }
+.hb-lcd-label { font: 700 17px/1 'Galmuri11', monospace; letter-spacing: 3px; color: var(--dev-glow, #7fe6ff); text-shadow: 0 0 8px var(--dev-glow, #7fe6ff); }
+.hb-lcd-dots { display: flex; gap: 8px; }
+.hb-lcd-dots i { width: 9px; height: 9px; border-radius: 50%; background: rgba(255, 255, 255, .2); }
+.hb-lcd-dots i.on { background: var(--dev-glow, #7fe6ff); box-shadow: 0 0 8px var(--dev-glow, #7fe6ff); }
+html.ui-holo.dev-art .holo-key.down { transform: translateY(4px) scale(.965); filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .6)) brightness(.75); }
+html.ui-holo.dev-art .hb-top.down { transform: translateY(4px) scale(.965); filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .6)) brightness(.75); }
+/* 홀로그램 끄기: 화면과 투사 빛이 렌즈 쪽으로 작아지며 사라짐, 렌즈·LCD 어두워짐 */
+html.ui-holo.dev-art .screen, html.ui-holo.dev-art .holo-cone { transition: opacity .35s ease, transform .35s ease; }
+html.ui-holo.dev-art.holo-off .screen { opacity: 0; transform: scale(.92) translateX(-20px); pointer-events: none; }
+html.ui-holo.dev-art.holo-off .holo-cone { opacity: 0; }
+html.ui-holo.dev-art.holo-off .hb-art-lens { animation: none; opacity: .15; }
+html.ui-holo.dev-art.holo-off .hb-art-screen { opacity: .25; }
+
+/* 홀로그램 화면 픽셀 느낌 (장현님 11-26): 도트 격자 + 계단 주사선 + 픽셀 렌더링. 외곽 LED 라인은 그대로 */
+html.ui-holo .lcd, html.ui-holo .lcd * { image-rendering: pixelated; }
+html.ui-holo .holo-fx {
+  background:
+    radial-gradient(circle at 1px 1px, rgba(0, 0, 0, .16) 0 .7px, transparent 1px) 0 0 / 3px 3px,
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, .09) 0 1px, transparent 1px 3px),
+    color-mix(in srgb, var(--dev-glow, #46e6ff) 18%, transparent);
+}
+html.ui-holo .holo-band { height: 6px; background: repeating-linear-gradient(90deg, rgba(255, 255, 255, .45) 0 3px, rgba(255, 255, 255, .15) 3px 6px); animation-timing-function: steps(24); }
+html.ui-holo .lcd { font-family: 'Galmuri11', monospace; }
+
+/* 피클(오이지) 홀로그램 요소 PNG 적용 (장현님 11-26): assets/holo/ */
+html.ui-holo .holo-led {
+  border: 14px solid transparent;
+  border-image: url("../assets/holo/holo_card_frame.png") 24 stretch;
+  border-radius: 0;
+  box-shadow: none;
+  filter: drop-shadow(0 0 6px var(--dev-glow, #7fe6ff));
+  inset: -6px;
+}
+html.ui-holo .holo-led::before { display: none; }
+html.ui-holo .holo-tab svg { display: none; }
+html.ui-holo .holo-tab::before {
+  content: ""; display: block; width: 22px; height: 22px; margin: 0 auto 2px;
+  background: var(--ic) center / contain no-repeat; image-rendering: pixelated;
+  filter: drop-shadow(0 0 4px var(--dev-glow, #7fe6ff));
+}
+html.ui-holo .holo-tab[data-tab="room"], .hb-lcd-icon[data-tab="room"] { --ic: url("../assets/holo/holo_icon_rooms.png"); }
+html.ui-holo .holo-tab[data-tab="characters"], .hb-lcd-icon[data-tab="characters"] { --ic: url("../assets/holo/holo_icon_mons.png"); }
+html.ui-holo .holo-tab[data-tab="usage"], .hb-lcd-icon[data-tab="usage"] { --ic: url("../assets/holo/holo_icon_usage.png"); }
+html.ui-holo .holo-tab[data-tab="settings"], .hb-lcd-icon[data-tab="settings"] { --ic: url("../assets/holo/holo_icon_setup.png"); }
+html.ui-holo.dev-art .hb-lcd-icon { -webkit-mask: none; background: var(--ic) center / contain no-repeat; image-rendering: pixelated; }
+html.ui-holo .lcd-top { background: url("../assets/holo/holo_header_bar.png") center / 100% 100% no-repeat; }
+html.ui-holo .holo-fx {
+  background:
+    url("../assets/holo/holo_scanline_glitch.png") 0 0 / auto repeat,
+    radial-gradient(circle at 1px 1px, rgba(0, 0, 0, .16) 0 .7px, transparent 1px) 0 0 / 3px 3px,
+    color-mix(in srgb, var(--dev-glow, #46e6ff) 16%, transparent);
+}
+html.ui-holo.dev-art .holo-cone,
+html.ui-holo.dev-art[data-win="wide"] .holo-cone {
+  clip-path: none;
+  background: url("../assets/holo/holo_beam_cone.png") center / 100% 100% no-repeat;
+  mix-blend-mode: screen;
+}
+/* 투사 빛 콘: 꼭짓점이 렌즈(y≈178)에 오도록, 진하게 2겹 */
+html.ui-holo.dev-art .holo-cone,
+html.ui-holo.dev-art[data-win="wide"] .holo-cone {
+  left: 262px; top: 28px; width: 52px; height: 300px;
+  background: url("../assets/holo/holo_beam_cone.png") center / 100% 100% no-repeat, url("../assets/holo/holo_beam_cone.png") center / 100% 100% no-repeat;
+  mix-blend-mode: normal; filter: saturate(1.8) brightness(1.15) drop-shadow(0 0 6px var(--dev-glow, #7fe6ff)); opacity: .9;
+}
+
+/* 키 둘레 발광 (장현님 11-26): 누를 때만 불 들어옴, 가운데 키는 색으로 늘 은은히 구분. 레이어 = v21-v20 차이 */
+.hb-glow { display: none; }
+html.ui-holo.dev-art .hb-glow { display: block; position: absolute; pointer-events: none; background: var(--g) 0 0 / 100% 100% no-repeat; opacity: 0; transition: opacity .35s ease-out; filter: drop-shadow(0 0 6px var(--dev-glow, #7fe6ff)); }
+html.ui-holo.dev-art .hb-glow.l { left: 131px; top: 315px; width: 129px; height: 245px; --g: var(--dev-keyLGlow); }
+html.ui-holo.dev-art .hb-glow.r { left: 366px; top: 315px; width: 130px; height: 245px; --g: var(--dev-keyRGlow); }
+html.ui-holo.dev-art .hb-glow.ok { left: 235px; top: 363px; width: 156px; height: 175px; --g: var(--dev-keyOKGlow); opacity: .35; }
+html.ui-holo.dev-art .holo-base:has(.holo-key[data-hkey="L"].down) .hb-glow.l,
+html.ui-holo.dev-art .holo-base:has(.holo-key[data-hkey="R"].down) .hb-glow.r,
+html.ui-holo.dev-art .holo-base:has(.holo-key.ok.down) .hb-glow.ok { opacity: 1; transition: opacity .05s; }
+html[data-dev="gunmetal"] { --dev-keyLGlow: url("../assets/device/gunmetal/keyLGlow.png"); --dev-keyRGlow: url("../assets/device/gunmetal/keyRGlow.png"); --dev-keyOKGlow: url("../assets/device/gunmetal/keyOKGlow.png"); }
+html[data-dev="obsidian"] { --dev-keyLGlow: url("../assets/device/obsidian/keyLGlow.png"); --dev-keyRGlow: url("../assets/device/obsidian/keyRGlow.png"); --dev-keyOKGlow: url("../assets/device/obsidian/keyOKGlow.png"); }
+html[data-dev="arctic"] { --dev-keyLGlow: url("../assets/device/arctic/keyLGlow.png"); --dev-keyRGlow: url("../assets/device/arctic/keyRGlow.png"); --dev-keyOKGlow: url("../assets/device/arctic/keyOKGlow.png"); }
+html[data-dev="cobalt"] { --dev-keyLGlow: url("../assets/device/cobalt/keyLGlow.png"); --dev-keyRGlow: url("../assets/device/cobalt/keyRGlow.png"); --dev-keyOKGlow: url("../assets/device/cobalt/keyOKGlow.png"); }
+
+/* 피클 4색 홀로그램 에셋 (장현님 11-26): assets/holo/<색>/ — 기기 색 따라 창 프레임·탭 아이콘(켜짐/꺼짐)·헤더·주사선·투사 빛 교체 */
+html[data-dev="gunmetal"] { --h-card-frame: url("../assets/holo/gunmetal/card_frame.png"); --h-header-bar: url("../assets/holo/gunmetal/header_bar.png"); --h-scan-overlay: url("../assets/holo/gunmetal/scan_overlay.png"); --h-beam: url("../assets/holo/gunmetal/beam.png"); --h-tab-room-on: url("../assets/holo/gunmetal/tab_room_on.png"); --h-tab-room-off: url("../assets/holo/gunmetal/tab_room_off.png"); --h-tab-mons-on: url("../assets/holo/gunmetal/tab_mons_on.png"); --h-tab-mons-off: url("../assets/holo/gunmetal/tab_mons_off.png"); --h-tab-usage-on: url("../assets/holo/gunmetal/tab_usage_on.png"); --h-tab-usage-off: url("../assets/holo/gunmetal/tab_usage_off.png"); --h-tab-setup-on: url("../assets/holo/gunmetal/tab_setup_on.png"); --h-tab-setup-off: url("../assets/holo/gunmetal/tab_setup_off.png"); }
+html[data-dev="obsidian"] { --h-card-frame: url("../assets/holo/obsidian/card_frame.png"); --h-header-bar: url("../assets/holo/obsidian/header_bar.png"); --h-scan-overlay: url("../assets/holo/obsidian/scan_overlay.png"); --h-beam: url("../assets/holo/obsidian/beam.png"); --h-tab-room-on: url("../assets/holo/obsidian/tab_room_on.png"); --h-tab-room-off: url("../assets/holo/obsidian/tab_room_off.png"); --h-tab-mons-on: url("../assets/holo/obsidian/tab_mons_on.png"); --h-tab-mons-off: url("../assets/holo/obsidian/tab_mons_off.png"); --h-tab-usage-on: url("../assets/holo/obsidian/tab_usage_on.png"); --h-tab-usage-off: url("../assets/holo/obsidian/tab_usage_off.png"); --h-tab-setup-on: url("../assets/holo/obsidian/tab_setup_on.png"); --h-tab-setup-off: url("../assets/holo/obsidian/tab_setup_off.png"); }
+html[data-dev="arctic"] { --h-card-frame: url("../assets/holo/arctic/card_frame.png"); --h-header-bar: url("../assets/holo/arctic/header_bar.png"); --h-scan-overlay: url("../assets/holo/arctic/scan_overlay.png"); --h-beam: url("../assets/holo/arctic/beam.png"); --h-tab-room-on: url("../assets/holo/arctic/tab_room_on.png"); --h-tab-room-off: url("../assets/holo/arctic/tab_room_off.png"); --h-tab-mons-on: url("../assets/holo/arctic/tab_mons_on.png"); --h-tab-mons-off: url("../assets/holo/arctic/tab_mons_off.png"); --h-tab-usage-on: url("../assets/holo/arctic/tab_usage_on.png"); --h-tab-usage-off: url("../assets/holo/arctic/tab_usage_off.png"); --h-tab-setup-on: url("../assets/holo/arctic/tab_setup_on.png"); --h-tab-setup-off: url("../assets/holo/arctic/tab_setup_off.png"); }
+html[data-dev="cobalt"] { --h-card-frame: url("../assets/holo/cobalt/card_frame.png"); --h-header-bar: url("../assets/holo/cobalt/header_bar.png"); --h-scan-overlay: url("../assets/holo/cobalt/scan_overlay.png"); --h-beam: url("../assets/holo/cobalt/beam.png"); --h-tab-room-on: url("../assets/holo/cobalt/tab_room_on.png"); --h-tab-room-off: url("../assets/holo/cobalt/tab_room_off.png"); --h-tab-mons-on: url("../assets/holo/cobalt/tab_mons_on.png"); --h-tab-mons-off: url("../assets/holo/cobalt/tab_mons_off.png"); --h-tab-usage-on: url("../assets/holo/cobalt/tab_usage_on.png"); --h-tab-usage-off: url("../assets/holo/cobalt/tab_usage_off.png"); --h-tab-setup-on: url("../assets/holo/cobalt/tab_setup_on.png"); --h-tab-setup-off: url("../assets/holo/cobalt/tab_setup_off.png"); }
+html.ui-holo.dev-art .holo-led { border-image: var(--h-card-frame) 40 22 22 22 stretch; border-width: 20px 14px 14px 14px; inset: -14px -6px -6px -6px; filter: drop-shadow(0 0 5px var(--dev-glow, #7fe6ff)); }
+html.ui-holo.dev-art .holo-tab[data-tab="room"], html.ui-holo.dev-art .hb-lcd-icon[data-tab="room"] { --ic: var(--h-tab-room-off); }
+html.ui-holo.dev-art .holo-tab.on[data-tab="room"], html.ui-holo.dev-art .hb-lcd-icon[data-tab="room"] { --ic: var(--h-tab-room-on); }
+html.ui-holo.dev-art .holo-tab[data-tab="characters"], html.ui-holo.dev-art .hb-lcd-icon[data-tab="characters"] { --ic: var(--h-tab-mons-off); }
+html.ui-holo.dev-art .holo-tab.on[data-tab="characters"], html.ui-holo.dev-art .hb-lcd-icon[data-tab="characters"] { --ic: var(--h-tab-mons-on); }
+html.ui-holo.dev-art .holo-tab[data-tab="usage"], html.ui-holo.dev-art .hb-lcd-icon[data-tab="usage"] { --ic: var(--h-tab-usage-off); }
+html.ui-holo.dev-art .holo-tab.on[data-tab="usage"], html.ui-holo.dev-art .hb-lcd-icon[data-tab="usage"] { --ic: var(--h-tab-usage-on); }
+html.ui-holo.dev-art .holo-tab[data-tab="settings"], html.ui-holo.dev-art .hb-lcd-icon[data-tab="settings"] { --ic: var(--h-tab-setup-off); }
+html.ui-holo.dev-art .holo-tab.on[data-tab="settings"], html.ui-holo.dev-art .hb-lcd-icon[data-tab="settings"] { --ic: var(--h-tab-setup-on); }
+html.ui-holo.dev-art .lcd-top { background: var(--h-header-bar) center / 100% 100% no-repeat; }
+html.ui-holo.dev-art .holo-fx { background: var(--h-scan-overlay) 0 0 / 64px 64px repeat, radial-gradient(circle at 1px 1px, rgba(0, 0, 0, .14) 0 .7px, transparent 1px) 0 0 / 3px 3px, color-mix(in srgb, var(--dev-glow, #46e6ff) 14%, transparent); }
+html.ui-holo.dev-art .holo-cone, html.ui-holo.dev-art[data-win="wide"] .holo-cone { background: var(--h-beam) center / 100% 100% no-repeat; }
+/* 꺼진 탭 아이콘 파일이 너무 어두워 안 보임 → 켜진 아이콘을 흐리게 */
+html.ui-holo.dev-art .holo-tab[data-tab="room"] { --ic: var(--h-tab-room-on); }
+html.ui-holo.dev-art .holo-tab[data-tab="characters"] { --ic: var(--h-tab-mons-on); }
+html.ui-holo.dev-art .holo-tab[data-tab="usage"] { --ic: var(--h-tab-usage-on); }
+html.ui-holo.dev-art .holo-tab[data-tab="settings"] { --ic: var(--h-tab-setup-on); }
+html.ui-holo.dev-art .holo-tab:not(.on)::before { opacity: .45; filter: none; }
+
+/* 피클 곡선 크롭 부품 좌표 (cf211e8, 4색 공통 상자) — 가운데 키는 그림 자체가 색 구분, 발광은 누를 때만 */
+html.ui-holo.dev-art .holo-key[data-hkey="L"] { left: 150px; top: 326px; width: 99px; height: 211px; }
+html.ui-holo.dev-art .holo-key[data-hkey="R"] { left: 378px; top: 334px; width: 95px; height: 203px; }
+html.ui-holo.dev-art .holo-key.ok { left: 239px; top: 367px; width: 142px; height: 164px; }
+html.ui-holo.dev-art .hb-top.a { left: 224px; top: 53px; width: 104px; height: 37px; }
+html.ui-holo.dev-art .hb-top.b { left: 345px; top: 53px; width: 90px; height: 37px; }
+html.ui-holo.dev-art .hb-glow.l { left: 143px; top: 320px; width: 112px; height: 223px; }
+html.ui-holo.dev-art .hb-glow.r { left: 372px; top: 327px; width: 107px; height: 216px; }
+html.ui-holo.dev-art .hb-glow.ok { left: 233px; top: 361px; width: 155px; height: 177px; opacity: 0; }
+html.ui-holo.dev-art .holo-base:has(.holo-key.ok.down) .hb-glow.ok { opacity: 1; }
