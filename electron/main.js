@@ -266,7 +266,7 @@ function refreshExternal() {
  * 창은 가운데를 기준으로 좌우로 늘어나고 줄어든다. 배율(deviceScale)은 창 크기와 화면 확대율에 같이 곱한다.
  * 기본 크기는 오이지 디자인 기준 (한 마리 580x450, 전체 보기 940x450). 자세한 건 docs/DEVICE.md */
 const device = {
-  sizes: { compact: { w: 580, h: 450 }, expanded: { w: 940, h: 450 } },
+  sizes: { compact: { w: 740, h: 440 }, expanded: { w: 1100, h: 440 } },
   mode: 'compact',
   anim: null
 };

@@ -573,7 +573,17 @@
 
   /* -------------------------------------------------- 화면 전환 */
   function switchView(view) {
+    const prev = app.view;
     app.view = VIEWS.includes(view) ? view : 'tamagotchi';
+    // 홀로그램 화면: 카드 스택이 넘어가듯 회전 (장현님 11-25)
+    const body = document.querySelector('.lcd-body');
+    if (body && prev && prev !== app.view && document.documentElement.classList.contains('ui-holo')) {
+      const dir = TABS.indexOf(app.view) >= TABS.indexOf(prev) ? 'next' : 'prev';
+      body.classList.remove('card-next', 'card-prev');
+      void body.offsetWidth;
+      body.classList.add(`card-${dir}`);
+      setTimeout(() => body.classList.remove(`card-${dir}`), 460);
+    }
     document.querySelectorAll('#viewSwitch button').forEach((b) => {
       b.classList.toggle('on', b.dataset.view === app.view);
     });

@@ -1742,3 +1742,205 @@ html.ui-holo .rail-label { color: #8f97b5; }
 
 html.ui-holo .kbd-sel { outline: 2px solid var(--holo-edge); outline-offset: 2px; box-shadow: 0 0 10px var(--holo-glow); }
 html.ui-holo .sheet { background: rgba(6, 22, 44, .94) !important; }
+
+/* ================================================================
+   옆으로 띄우기 레이아웃 (장현님 11-25): 왼쪽 세로 기기, 오른쪽 홀로그램 화면
+   기기 시안: docs/characters 아님 — agy device concept (건메탈·고무 그립·나사·눈금 링·주황 ✓·청록 발광선·줄고리)
+   ================================================================ */
+html.ui-holo .screen {
+  top: 54px;
+  left: 248px;
+  transform: none;
+}
+html.preview.ui-holo .stage { width: 740px; height: 440px; }
+html.preview.ui-holo[data-win="wide"] .stage { width: 1100px; }
+
+/* 투사 빛: 기기 렌즈 → 화면 왼쪽으로 옆으로 퍼진다 */
+html.ui-holo .holo-cone,
+html.ui-holo[data-win="wide"] .holo-cone {
+  left: 196px;
+  top: 54px;
+  width: 54px;
+  height: 300px;
+  transform: none;
+  clip-path: polygon(0 34%, 100% 0, 100% 100%, 0 48%);
+  background: linear-gradient(90deg, rgba(90, 220, 255, .55), rgba(90, 220, 255, .05));
+}
+
+/* 기기 본체: 세로 건메탈 */
+html.ui-holo .holo-base {
+  left: 22px;
+  top: 62px;
+  bottom: auto;
+  width: 186px;
+  height: 300px;
+  transform: none;
+  border-radius: 0;
+  clip-path: polygon(16% 0, 76% 0, 88% 5%, 100% 13%, 100% 90%, 88% 100%, 12% 100%, 0 92%, 0 11%, 9% 4%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .10), rgba(255, 255, 255, 0) 30%),
+    linear-gradient(160deg, #6b7079 0%, #4b4f57 45%, #33363d 100%);
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, .35);
+  overflow: visible;
+}
+/* 패널 이음선 */
+html.ui-holo .holo-base::before {
+  content: "";
+  position: absolute;
+  inset: 12px 14px;
+  clip-path: polygon(10% 0, 90% 0, 100% 8%, 100% 100%, 0 100%, 0 8%);
+  border: 1px solid rgba(0, 0, 0, .35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12);
+  pointer-events: none;
+}
+.hb-loop, .hb-grip, .hb-screw, .hb-vent, .hb-strip, .hb-name { display: none; }
+html.ui-holo .hb-loop {
+  display: block;
+  position: absolute;
+  left: 150px;
+  top: 30px;
+  width: 54px;
+  height: 54px;
+  border: 7px solid #9aa0a8;
+  border-radius: 50%;
+  border-bottom-color: transparent;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .4), 0 0 0 1px rgba(0, 0, 0, .3);
+  z-index: 4;
+}
+html.ui-holo .hb-grip {
+  display: block;
+  position: absolute;
+  top: 70px;
+  width: 10px;
+  height: 170px;
+  border-radius: 4px;
+  background: repeating-linear-gradient(180deg, #23252a 0 9px, #34373e 9px 12px);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .5);
+}
+html.ui-holo .hb-grip.l { left: 0; }
+html.ui-holo .hb-grip.r { right: 0; }
+html.ui-holo .hb-screw {
+  display: block;
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #8d929a, #2b2e33 70%);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .45);
+}
+html.ui-holo .hb-screw.s1 { left: 26px; top: 22px; }
+html.ui-holo .hb-screw.s2 { right: 26px; top: 22px; }
+html.ui-holo .hb-screw.s3 { left: 26px; bottom: 22px; }
+html.ui-holo .hb-screw.s4 { right: 26px; bottom: 22px; }
+html.ui-holo .hb-vent {
+  display: block;
+  position: absolute;
+  left: 26px;
+  top: 52px;
+  width: 22px;
+  height: 18px;
+  background: repeating-linear-gradient(180deg, #1c1e22 0 2px, transparent 2px 5px);
+}
+html.ui-holo .hb-strip {
+  display: block;
+  position: absolute;
+  right: 16px;
+  top: 64px;
+  width: 3px;
+  height: 96px;
+  border-radius: 2px;
+  background: #5ff3ff;
+  box-shadow: 0 0 8px 2px rgba(95, 243, 255, .7);
+  animation: holoFlicker 3.4s steps(1) infinite;
+}
+html.ui-holo .hb-name {
+  display: block;
+  position: absolute;
+  right: 24px;
+  top: 178px;
+  font: 700 10px/1 'Galmuri11', monospace;
+  letter-spacing: 1px;
+  color: #c2c7cf;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .5);
+}
+
+/* 눈금 링 렌즈 (투사구) */
+html.ui-holo .holo-emitter {
+  left: 50%;
+  top: 46px;
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background:
+    radial-gradient(circle, #0b1220 0 52%, transparent 53%),
+    repeating-conic-gradient(from 0deg, #d8dce2 0 1.2deg, #5d626b 1.2deg 7.5deg);
+  box-shadow: 0 0 0 4px #7e848d, 0 0 0 6px #2a2d33, inset 0 0 0 10px rgba(0, 0, 0, .25);
+}
+html.ui-holo .holo-emitter i {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #c7fbff 0%, #3fd0ff 30%, #0d3550 72%, #071522 100%);
+  box-shadow: 0 0 18px 6px rgba(57, 200, 255, .5);
+}
+
+/* 3버튼: 아래쪽 가로 줄, 가운데 ✓는 주황 */
+html.ui-holo .holo-keys {
+  left: 16px;
+  right: 16px;
+  bottom: 46px;
+  gap: 8px;
+}
+html.ui-holo .holo-key {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 2px solid #1a1c21;
+  background: linear-gradient(180deg, #4a4e57, #2c2f36);
+  color: #d5dae2;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 3px 0 #15171b;
+}
+html.ui-holo .holo-key svg { width: 16px; height: 16px; filter: none; }
+html.ui-holo .holo-key.ok {
+  width: 52px;
+  color: #fff4ea;
+  background: linear-gradient(180deg, #ff8a3d, #e0601a);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 3px 0 #8a3a0c, 0 0 12px rgba(255, 130, 60, .35);
+}
+html.ui-holo .holo-key.ok svg { filter: none; }
+html.ui-holo .holo-key.ok.hold { color: #3a1500; }
+
+/* 창 버튼·낮밤 스위치: 위쪽 줄 양끝 */
+html.ui-holo .tabctl { top: 14px; bottom: auto; }
+html.ui-holo .tabctl.tl { left: 26px; width: 80px; }
+html.ui-holo .tabctl.tr { left: auto; right: 18px; width: 60px; }
+
+/* 카드 스택: 화면 뒤에 겹친 카드 2장 + 탭 전환 때 카드가 돌며 넘어감 */
+html.ui-holo .screen::before,
+html.ui-holo .screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
+  background: rgba(40, 140, 220, .10);
+  box-shadow: inset 0 0 0 1.5px rgba(127, 230, 255, .45);
+  z-index: -1;
+}
+html.ui-holo .screen::before { transform: translate(10px, -8px) scale(.97); opacity: .7; }
+html.ui-holo .screen::after { transform: translate(20px, -16px) scale(.94); opacity: .4; }
+html.ui-holo .lcd { perspective: 900px; }
+html.ui-holo .lcd-body { transform-origin: 50% 50%; backface-visibility: hidden; }
+html.ui-holo .lcd-body.card-next { animation: cardNext .44s cubic-bezier(.2, .7, .2, 1); }
+html.ui-holo .lcd-body.card-prev { animation: cardPrev .44s cubic-bezier(.2, .7, .2, 1); }
+@keyframes cardNext {
+  0% { transform: translate(18%, -6%) rotateY(-58deg) scale(.86); opacity: 0; }
+  60% { opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
+@keyframes cardPrev {
+  0% { transform: translate(-18%, -6%) rotateY(58deg) scale(.86); opacity: 0; }
+  60% { opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}
