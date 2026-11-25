@@ -651,6 +651,20 @@
     return state.images && state.images[id];
   }
 
+  // 새 시트(512×640, 128칸 4열 × 5행: 대기/감정/작업/잠/걷기)와 예전 32px 한 줄 시트를 모두 읽는다.
+  const GRID_ROWS = { idle: 0, emotion: 1, work: 2, sleep: 3, walk: 4 };
+  const GRID_CELL = 128;
+  function isGrid(img) { return !!img && img.height >= 256; }
+  function cellOf(img, anim, step) {
+    if (isGrid(img)) {
+      const cols = Math.max(1, Math.floor(img.width / GRID_CELL));
+      const row = GRID_ROWS[anim] !== undefined ? GRID_ROWS[anim] : 0;
+      return { sx: (step % cols) * GRID_CELL, sy: row * GRID_CELL, s: GRID_CELL, grid: true };
+    }
+    const frames = ATLAS[anim] || ATLAS.idle;
+    return { sx: frames[step % frames.length] * 32, sy: 0, s: 32, grid: false };
+  }
+
   const HEART_ART = ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'];
   const Z_ART = ['#####', '...#.', '..#..', '.#...', '#####'];
 
@@ -676,8 +690,8 @@
     let anim = 'idle';
     if (look === 'work') anim = 'work';
     else if (look === 'sleep' || look === 'offline') anim = 'sleep';
-    const frames = ATLAS[anim] || ATLAS.idle;
-    const frame = frames[step % frames.length];
+    const cell = cellOf(img, anim, step);
+    const grid = cell.grid;
 
     const bob = look === 'idle' ? Math.round(Math.sin(now * 2.2)) : 0;
     if (state.hop.t < state.hop.dur) state.hop.t += dt;
@@ -700,8 +714,8 @@
     }
     ctx.restore();
 
-    // 작업 중 — 작은 키보드
-    if (look === 'work') {
+    // 작업 중 — 작은 키보드 (새 시트는 작업 동작이 그림에 있으니 키보드는 예전 시트에만)
+    if (look === 'work' && !grid) {
       const kw = Math.round(sp * 0.5);
       const kx = Math.round(cx - kw / 2);
       const ky = feet - 6;
@@ -724,12 +738,12 @@
       if (state.chewing > 0 && Math.random() < 0.55) {
         ctx.translate(0, Math.random() < 0.5 ? -1 : 0);
       }
-      ctx.drawImage(img, frame * 32, 0, 32, 32, Math.round(cx - sp / 2), Math.round(y), sp, sp);
+      ctx.drawImage(img, cell.sx, cell.sy, cell.s, cell.s, Math.round(cx - sp / 2), Math.round(y), sp, sp);
       ctx.restore();
     }
 
-    // 잠자는 모습 — 이불 덮기
-    if (look === 'sleep' || look === 'offline') {
+    // 잠자는 모습 — 이불 덮기 (새 시트는 잠 동작·Z가 그림에 있음)
+    if ((look === 'sleep' || look === 'offline') && !grid) {
       const day = state.theme === 'day';
       const bw = Math.round(sp * 0.74);
       const bh = Math.round(sp * 0.26);
@@ -753,7 +767,7 @@
     }
 
     // Zzz
-    if (look === 'sleep' || look === 'offline') {
+    if ((look === 'sleep' || look === 'offline') && !grid) {
       const ph = (now * 0.42) % 1;
       const c = state.theme === 'day' ? '#5a6bb0' : '#d5d9ff';
       for (let k = 0; k < 3; k += 1) {
@@ -874,18 +888,22 @@
     m.val.textContent = `${Math.round(value)}%`;
   }
 
-  function animFrame(id, look) {
-    const frames = ATLAS[look === 'work' ? 'work' : look === 'sleep' || look === 'offline' ? 'sleep' : 'idle'];
-    const speed = look === 'work' ? 0.16 : 0.42;
-    return frames[Math.floor(performance.now() / 1000 / speed) % frames.length];
-  }
-
   function paintFace(node, id, look, size) {
     if (!node) return;
-    const idx = animFrame(id, look);
+    const anim = look === 'work' ? 'work' : look === 'sleep' || look === 'offline' ? 'sleep' : 'idle';
+    const speed = look === 'work' ? 0.16 : 0.42;
+    const step = Math.floor(performance.now() / 1000 / speed);
+    const img = spriteImg(id);
+    const cell = cellOf(img, anim, step);
     node.style.backgroundImage = `url('../assets/sprites/${id}.png')`;
-    node.style.backgroundSize = `${size * 11}px ${size}px`;
-    node.style.backgroundPosition = `${-idx * size}px 0`;
+    if (cell.grid) {
+      const k = size / cell.s;
+      node.style.backgroundSize = `${img.width * k}px ${img.height * k}px`;
+      node.style.backgroundPosition = `${-cell.sx * k}px ${-cell.sy * k}px`;
+    } else {
+      node.style.backgroundSize = `${size * 11}px ${size}px`;
+      node.style.backgroundPosition = `${-(cell.sx / 32) * size}px 0`;
+    }
   }
 
   function paintSelection() {

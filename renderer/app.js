@@ -62,8 +62,21 @@
     node.style.backgroundImage = `url('../assets/sprites/${id}.png')`;
   }
 
+  // 시트 크기를 한 번 읽어 둔다: 높이 256 이상이면 새 시트(128칸 4열 × 5행), 아니면 예전 32px 한 줄.
+  const sheetDims = {};
+  function sheetDim(id) {
+    if (!sheetDims[id]) {
+      sheetDims[id] = { w: 0, h: 0 };
+      const img = new Image();
+      img.onload = () => { sheetDims[id] = { w: img.width, h: img.height }; };
+      img.src = `../assets/sprites/${id}.png`;
+    }
+    return sheetDims[id];
+  }
+
   function paintAvatars() {
     const frames = { idle: [0, 1], walk: [2, 3, 4, 5], work: [6, 7, 8, 9], sleep: [10] };
+    const gridRows = { idle: 0, emotion: 1, work: 2, sleep: 3, walk: 4 };
     app.avatarFrame += 1;
     document.querySelectorAll('.avatar').forEach((node) => {
       const id = node.dataset.bot;
@@ -72,11 +85,20 @@
       if (node.style.backgroundImage !== src) node.style.backgroundImage = src;
       const st = (app.bots[id] && app.bots[id].state) || 'idle';
       const anim = st === 'working' ? 'work' : st === 'offline' ? 'sleep' : 'idle';
-      const list = frames[anim];
-      const idx = list[Math.floor(app.avatarFrame / (anim === 'work' ? 3 : 6)) % list.length];
+      const step = Math.floor(app.avatarFrame / (anim === 'work' ? 3 : 6));
       const size = Math.round(node.getBoundingClientRect().width) || 40;
-      node.style.backgroundSize = `${size * 11}px ${size}px`;
-      node.style.backgroundPosition = `${-idx * size}px 0`;
+      const dim = sheetDim(id);
+      if (dim.h >= 256) {
+        const k = size / 128;
+        const cols = Math.max(1, Math.floor(dim.w / 128));
+        node.style.backgroundSize = `${dim.w * k}px ${dim.h * k}px`;
+        node.style.backgroundPosition = `${-(step % cols) * size}px ${-gridRows[anim] * size}px`;
+      } else {
+        const list = frames[anim];
+        const idx = list[step % list.length];
+        node.style.backgroundSize = `${size * 11}px ${size}px`;
+        node.style.backgroundPosition = `${-idx * size}px 0`;
+      }
     });
   }
 
