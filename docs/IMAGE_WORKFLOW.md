@@ -14,7 +14,7 @@
 - 새 캐릭터/포즈(예: 클로드 집게팔 등)를 AI로 생성할 때는 **반드시 1줄(4프레임)씩** 끊어 생성한 뒤, 각 프레임을 잘라 배경 투명화 + 128×128 셀 중앙(x중심 32/64) 정렬로 조립한다.
 
 ## 2. 참조 스크립트 및 원화 위치
-- 스크립트: `scripts/aimon-sheets/` (`sheetlib.py`, `anim.py`, `oiji_frames.py`, `sbji_frames.py`, `takuan_frames.py`, `previews.py`)
+- 스크립트: `scripts/aimon-sheets/` (`sheetlib.py`, `anim.py`, `oiji_frames.py`, `sbji_frames.py`, `takuan_frames.py`, `build_sheets.py`, `previews.py`, `verify_sheet.py`)
 - 오이지 비눗방울 원화: `docs/characters/03-oiji-bubble-128.png`
 - 오이지 14자 비눗방울 시트(색상·형태 그대로 추출용): `docs/characters/oiji-14-bubbles.png`
 - 단무지 원화: `docs/characters/takuan.jpg` (및 드라이브 `07_128px_도트/06-takuan-jolly-128.png`)
@@ -25,6 +25,8 @@
 2. 2행 자음 변신은 마스크로 하얗게 밀지 말고 **`oiji-14-bubbles.png`의 파스텔 색감과 둥근 비눗방울 형태를 그대로** 잘라 씀 + 힘주는 묘사(`> <` 눈, 힘주는 선/스파크).
 
 ## 4. 규격 검증 체크리스트 (`#5`)
+- 자동 검사: `python3 scripts/aimon-sheets/verify_sheet.py <시트.png> ...` (크기·모드·알파·빈 셀·경계 침범)
+- 조립: `python3 scripts/aimon-sheets/build_sheets.py <출력폴더> [oiji|sbji|takuan]` → `previews.py <출력폴더>`
 - 크기: `512×640`, 모드 `RGBA`
 - 셀: `128×128` 4열×5행 (빈 셀 0개, 경계 침범 0개)
 - 투명도: 알파 `0`과 `255`만 사용 (부분투명 `0px`)
