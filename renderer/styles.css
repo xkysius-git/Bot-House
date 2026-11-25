@@ -1735,3 +1735,4 @@ html.ui-holo .tabctl.tr { left: calc(50% + 116px); width: 60px; }
 html.ui-holo .rail-label { color: #8f97b5; }
 
 html.ui-holo .kbd-sel { outline: 2px solid var(--holo-edge); outline-offset: 2px; box-shadow: 0 0 10px var(--holo-glow); }
+html.ui-holo .sheet { background: rgba(6, 22, 44, .94) !important; }
