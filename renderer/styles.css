@@ -1472,3 +1472,266 @@ html.preview .stage {
   transition: width .32s cubic-bezier(.3, .7, .3, 1);
 }
 html.preview[data-win="wide"] .stage { width: 940px; }
+
+/* ================================================================
+   홀로그램 UI (TASKS #25 초안): 3버튼 본체 + 위로 떠오른 홀로그램 화면
+   html.ui-holo 일 때만 적용 — 예전 디지바이스 몸체·D-패드·A/B/C는 숨긴다
+   ================================================================ */
+html.ui-holo {
+  --holo-bg: rgba(8, 30, 58, .62);
+  --holo-edge: #7fe6ff;
+  --holo-ink: #c9f6ff;
+  --holo-muted: rgba(160, 225, 255, .62);
+  --holo-glow: rgba(64, 210, 255, .55);
+  --holo-tint: rgba(70, 230, 255, .10);
+}
+
+html.ui-holo .chassis,
+html.ui-holo .wing,
+html.ui-holo .crown,
+html.ui-holo .lcd-tabs { display: none !important; }
+
+/* 화면: 기기 위에 떠 있는 홀로그램 패널 */
+html.ui-holo .screen {
+  top: 12px;
+  left: 50%;
+  width: 468px;
+  height: 300px;
+  transform: translateX(-50%);
+  z-index: 4;
+  filter: drop-shadow(0 0 10px var(--holo-glow));
+  animation: holoFloat 5.2s ease-in-out infinite;
+}
+html.ui-holo[data-win="wide"] .screen { width: 836px; }
+@keyframes holoFloat {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -3px; }
+}
+
+html.ui-holo .lcd {
+  border-radius: 0;
+  background:
+    linear-gradient(180deg, rgba(40, 140, 220, .16), rgba(20, 70, 140, .10) 60%, rgba(30, 120, 200, .20)),
+    var(--holo-bg);
+  /* 콘셉트처럼 네 모서리를 비스듬히 깎은 패널 */
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
+  box-shadow: inset 0 0 0 1.5px var(--holo-edge), inset 0 0 26px rgba(80, 200, 255, .28);
+  animation: holoFlicker 4.7s steps(1) infinite;
+}
+html.ui-holo .lcd-glass { display: none; }
+
+/* 상단 4아이콘 탭 */
+.holo-tabs { display: none; }
+html.ui-holo .holo-tabs {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  padding: 8px 18px 6px;
+  border-bottom: 1px solid rgba(127, 230, 255, .45);
+  position: relative;
+  z-index: 6;
+  -webkit-app-region: no-drag;
+}
+.holo-tab {
+  border: 1.5px solid transparent;
+  background: transparent;
+  color: var(--holo-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 2px 4px;
+  font-family: var(--font-pixel);
+  font-size: 6px;
+  letter-spacing: .04em;
+  position: relative;
+}
+.holo-tab svg { width: 24px; height: 24px; fill: currentColor; }
+.holo-tab svg .hole { fill: #0b2440; }
+.holo-tab:hover { color: var(--holo-ink); }
+.holo-tab.on {
+  color: var(--holo-ink);
+  border-color: var(--holo-edge);
+  box-shadow: 0 0 8px rgba(127, 230, 255, .45), inset 0 0 10px rgba(127, 230, 255, .2);
+  text-shadow: 0 0 6px var(--holo-glow);
+}
+.holo-tab.on::after {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  width: 8px; height: 8px;
+  transform: translateX(-50%) rotate(45deg);
+  background: #0b2440;
+  border-right: 1.5px solid var(--holo-edge);
+  border-bottom: 1.5px solid var(--holo-edge);
+}
+/* 탭 줄에 초점이 있을 때 (←/→로 탭 이동) */
+html.ui-holo[data-focus="tabs"] .holo-tab.on { animation: tabPulse 1.1s ease-in-out infinite; }
+@keyframes tabPulse { 50% { box-shadow: 0 0 14px rgba(127, 230, 255, .8), inset 0 0 14px rgba(127, 230, 255, .35); } }
+
+html.ui-holo .lcd-top {
+  height: 24px;
+  background: transparent;
+  border-bottom: 1px solid rgba(127, 230, 255, .22);
+  padding: 0 14px;
+}
+html.ui-holo .lcd-clock { display: inline; color: var(--holo-muted); }
+html.ui-holo .lcd-chip { border-color: rgba(127, 230, 255, .4); color: var(--holo-ink); }
+
+/* 화면 안 글자·카드도 홀로그램 톤으로 */
+html.ui-holo .lcd { --lcd-ink: var(--holo-ink); --lcd-muted: var(--holo-muted); --lcd-line: rgba(127, 230, 255, .3); --lcd-top: transparent; color: var(--holo-ink); }
+html.ui-holo .usage-card,
+html.ui-holo .card,
+html.ui-holo .sheet { background: rgba(10, 40, 75, .55) !important; border-color: rgba(127, 230, 255, .35) !important; color: var(--holo-ink); }
+
+/* ---------------- 홀로그램 효과: 캐릭터(house.js drawHologram)와 같은 언어 ----------------
+   청록 덧칠 · 위→아래로 흐르는 밝은 띠 · 주사선 · 깜빡임 · 가로로 어긋나는 글리치 */
+.holo-fx { display: none; }
+html.ui-holo .holo-fx {
+  display: block;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 20;
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 10, 25, .26) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, var(--holo-tint), rgba(70, 230, 255, .04));
+  mix-blend-mode: screen;
+  animation: scanScroll .9s linear infinite;
+}
+@keyframes scanScroll { to { background-position: 0 3px, 0 0; } }
+.holo-band {
+  position: absolute;
+  left: 0; right: 0;
+  height: 9%;
+  top: -10%;
+  background: linear-gradient(180deg, transparent, rgba(220, 250, 255, .22), transparent);
+  animation: bandSweep 3.6s linear infinite;
+}
+@keyframes bandSweep { to { top: 110%; } }
+.holo-slice {
+  position: absolute;
+  left: 0; right: 0;
+  top: var(--slice-y, 40%);
+  height: var(--slice-h, 8%);
+  background: rgba(140, 240, 255, .18);
+  box-shadow: 0 0 0 1px rgba(140, 240, 255, .25);
+  opacity: 0;
+}
+@keyframes holoFlicker {
+  0%, 100% { opacity: .96; }
+  7% { opacity: .9; }
+  8% { opacity: .98; }
+  52% { opacity: .93; }
+  53% { opacity: 1; }
+  81% { opacity: .88; }
+  82% { opacity: .97; }
+}
+/* 글리치 순간: 화면이 가로로 썰린 듯 어긋남 (app.js가 몇 초마다 켠다) */
+html.ui-holo .screen.glitch .lcd {
+  transform: translateX(var(--glitch-x, 3px)) skewX(-1.2deg);
+  filter: hue-rotate(-18deg) saturate(1.4);
+}
+html.ui-holo .screen.glitch .holo-slice { opacity: 1; transform: translateX(calc(var(--glitch-x, 3px) * -3)); }
+
+/* ---------------- 투사 빛 ---------------- */
+.holo-cone { display: none; }
+html.ui-holo .holo-cone {
+  display: block;
+  position: absolute;
+  left: 50%;
+  top: 296px;
+  width: 420px;
+  height: 52px;
+  transform: translateX(-50%);
+  z-index: 3;
+  pointer-events: none;
+  clip-path: polygon(0 0, 100% 0, 58% 100%, 42% 100%);
+  background: linear-gradient(0deg, rgba(90, 220, 255, .55), rgba(90, 220, 255, .06));
+  filter: blur(2px);
+  animation: holoFlicker 3.1s steps(1) infinite;
+}
+html.ui-holo[data-win="wide"] .holo-cone { width: 760px; clip-path: polygon(0 0, 100% 0, 54% 100%, 46% 100%); }
+
+/* ---------------- 3버튼 본체 ---------------- */
+.holo-base { display: none; }
+html.ui-holo .holo-base {
+  display: block;
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  width: 372px;
+  height: 96px;
+  transform: translateX(-50%);
+  z-index: 5;
+  border-radius: 26px 26px 30px 30px;
+  background:
+    linear-gradient(180deg, #3a3f52 0%, #22252f 38%, #15171e 100%);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, .22),
+    inset 0 -3px 0 rgba(120, 90, 255, .35),
+    0 10px 18px rgba(0, 0, 0, .55),
+    0 0 0 1.5px #0b0c12;
+  -webkit-app-region: drag;
+}
+.holo-emitter {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  width: 132px;
+  height: 22px;
+  transform: translateX(-50%);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #0d0f16, #1d2130);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, .8), 0 1px 0 rgba(255, 255, 255, .12);
+}
+.holo-emitter i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 54px;
+  height: 10px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #b9f5ff 0%, #39c8ff 45%, rgba(57, 200, 255, 0) 75%);
+  box-shadow: 0 0 14px 4px rgba(57, 200, 255, .55);
+  animation: holoFlicker 2.3s steps(1) infinite;
+}
+.holo-keys {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: 14px;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  -webkit-app-region: no-drag;
+}
+.holo-key {
+  width: 74px;
+  height: 40px;
+  border-radius: 14px;
+  border: 1.5px solid #090a10;
+  background: linear-gradient(180deg, #2b2f3e, #171a23);
+  color: #9b8cff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16), inset 0 0 0 1px rgba(150, 130, 255, .25), 0 3px 0 #08090d;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.holo-key svg { width: 20px; height: 20px; fill: currentColor; filter: drop-shadow(0 0 4px rgba(155, 140, 255, .8)); }
+.holo-key.ok { width: 96px; color: #6ff0ff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .16), inset 0 0 0 1px rgba(111, 240, 255, .35), 0 3px 0 #08090d; }
+.holo-key.ok svg { filter: drop-shadow(0 0 5px rgba(111, 240, 255, .9)); }
+.holo-key:hover { filter: brightness(1.2); }
+.holo-key:active,
+.holo-key.down { transform: translateY(2px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 1px 0 #08090d; }
+.holo-key.ok.hold { color: #ffd36f; }
+
+/* 창 버튼·낮밤 스위치는 본체 위 양쪽 끝으로 */
+html.ui-holo .tabctl { top: auto; bottom: 66px; z-index: 6; }
+html.ui-holo .tabctl.tl { left: calc(50% - 178px); width: 70px; }
+html.ui-holo .tabctl.tr { left: calc(50% + 116px); width: 60px; }
+html.ui-holo .rail-label { color: #8f97b5; }
+
+html.ui-holo .kbd-sel { outline: 2px solid var(--holo-edge); outline-offset: 2px; box-shadow: 0 0 10px var(--holo-glow); }

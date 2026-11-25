@@ -20,11 +20,18 @@
     update: {},
     view: 'tamagotchi',
     sheet: null,
-    careIdx: 0
+    careIdx: 0,
+    focus: 'tabs',   // 'tabs' = 상단 탭 줄, 'view' = 화면 안
+    settingIdx: 0
   };
 
   const BOT_IDS = ['oiji', 'takuan', 'sbji', 'claude'];
-  const VIEWS = ['tamagotchi', 'house', 'usage'];
+  const VIEWS = ['tamagotchi', 'house', 'usage', 'settings'];
+  // 홀로그램 UI 상단 탭 순서 (← →): ROOM · CHARACTERS · USAGE · SETTINGS
+  const TABS = ['house', 'tamagotchi', 'usage', 'settings'];
+  const TAB_OF = { house: 'room', tamagotchi: 'characters', usage: 'usage', settings: 'settings' };
+  // SETTINGS 탭에서 ← → 로 고르고 ✓ 로 누르는 줄
+  const SETTING_ROWS = ['claudeRestart', 'claudeLog', 'settingsBtn', 'updateRow'];
   const CARE = ['pet', 'snack', 'cheer', 'sleep'];
 
   const stateLabel = {
@@ -517,7 +524,12 @@
                <div><dt>이번 주</dt><dd>${fmtTokens(usage.weekTokens)}</dd></div>
                <div><dt>수신</dt><dd>${st.usageAt ? timeAgo(st.usageAt) : '-'}</dd></div>
              </dl>`
-          : `<p class="empty">로컬에서 셀 수 없는 원격 봇이에요.<br><span style="opacity:.7">상태 API로 사용량을 보내면 표시돼요.</span></p>`}
+          : `<dl>
+               <div><dt>지금</dt><dd>${stateLabel[st.state] || '쉬는 중'}</dd></div>
+               <div><dt>마지막 응답</dt><dd>${timeAgo(st.lastActivity)}</dd></div>
+               <div><dt>토큰</dt><dd>앱에서 확인</dd></div>
+             </dl>
+             <p class="empty" style="margin-top:4px">${botId === 'sbji' ? '단무지가 API로 부르는 모델이라 따로 세지 않아요.' : `사용량 조회 API가 없어 ${def.name} 앱에서만 볼 수 있어요.`}</p>`}
       </article>`;
   }
 
@@ -573,6 +585,129 @@
     if (window.Tama) window.Tama.setVisible(app.view === 'tamagotchi');
     if (app.view === 'usage') loadUsage(false);
     else if (app.view === 'house') window.House.setSelected(app.selected);
+    else if (app.view === 'settings') { openSheet('menu'); paintSettingSel(); }
+    document.querySelectorAll('#holoTabs .holo-tab').forEach((b) => {
+      b.classList.toggle('on', b.dataset.tab === TAB_OF[app.view]);
+    });
+  }
+
+  /* -------------------------------------------------- 홀로그램 UI: ← ✓ → 3버튼 조작 (docs/UI_CONTROLS.md) */
+  function setFocus(where) {
+    app.focus = where;
+    document.documentElement.dataset.focus = where;
+  }
+
+  function stepTab(step) {
+    const i = Math.max(0, TABS.indexOf(app.view));
+    switchView(TABS[(i + step + TABS.length) % TABS.length]);
+  }
+
+  function paintSettingSel() {
+    SETTING_ROWS.forEach((id, i) => {
+      const n = el(id);
+      if (n) n.classList.toggle('kbd-sel', app.view === 'settings' && app.focus === 'view' && i === app.settingIdx);
+    });
+  }
+
+  function stepRoomBot(step) {
+    const i = BOT_IDS.indexOf(app.selected);
+    const next = BOT_IDS[(i + step + BOT_IDS.length) % BOT_IDS.length];
+    app.selected = next;
+    window.House.setSelected(next);
+    renderAll();
+  }
+
+  function holoMove(step) {
+    if (app.focus === 'tabs') { stepTab(step); return; }
+    const care = app.sheet === 'care';
+    if (app.view === 'tamagotchi') { if (care) moveCare(step); else stepBot(step); }
+    else if (app.view === 'house') { if (!el('popover').hidden) closePopover(); stepRoomBot(step); }
+    else if (app.view === 'usage') pageStep(step);
+    else if (app.view === 'settings') {
+      if (app.sheet !== 'menu') return;
+      app.settingIdx = (app.settingIdx + step + SETTING_ROWS.length) % SETTING_ROWS.length;
+      paintSettingSel();
+      const n = el(SETTING_ROWS[app.settingIdx]);
+      if (n) n.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }
+
+  function holoOk() {
+    if (app.focus === 'tabs') { setFocus('view'); paintSettingSel(); return; }
+    if (app.view === 'tamagotchi') { if (app.sheet === 'care') runCare(); else openSheet('care'); }
+    else if (app.view === 'house') openPopover(app.selected || BOT_IDS[0]);
+    else if (app.view === 'usage') loadUsage(true);
+    else if (app.view === 'settings') {
+      if (app.sheet !== 'menu') { openSheet('menu'); return; }
+      const n = el(SETTING_ROWS[app.settingIdx]);
+      if (n) n.click();
+    }
+  }
+
+  // 뒤로: 열린 창(설정 창 → 팝오버 → 액정 시트)부터 닫고, 없으면 탭 줄로
+  function holoBack() {
+    if (!el('settingsModal').hidden) { el('settingsModal').hidden = true; return; }
+    if (!el('popover').hidden) { closePopover(); return; }
+    if (app.sheet && app.view !== 'settings') { closeSheet(); return; }
+    if (app.sheet === 'log') { openSheet('menu'); return; }
+    setFocus('tabs');
+    paintSettingSel();
+  }
+
+  function bindHoloKeys() {
+    const ok = document.querySelector('.holo-key.ok');
+    document.querySelectorAll('.holo-key[data-hkey="L"], .holo-key[data-hkey="R"]').forEach((k) => {
+      k.addEventListener('click', () => {
+        if (window.Sfx) window.Sfx.play('click');
+        holoMove(k.dataset.hkey === 'L' ? -1 : 1);
+      });
+    });
+    if (!ok) return;
+    let timer = null;
+    let held = false;
+    ok.addEventListener('pointerdown', () => {
+      held = false;
+      ok.classList.add('down');
+      timer = setTimeout(() => { held = true; ok.classList.add('hold'); holoBack(); }, 600);
+    });
+    const end = (run) => {
+      clearTimeout(timer);
+      ok.classList.remove('down', 'hold');
+      if (run && !held) holoOk();
+      held = false;
+    };
+    ok.addEventListener('pointerup', () => end(true));
+    ok.addEventListener('pointerleave', () => end(false));
+    ok.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') e.preventDefault(); });
+
+    el('holoTabs').addEventListener('click', (e) => {
+      const btn = e.target.closest('.holo-tab');
+      if (!btn) return;
+      const view = TABS.find((v) => TAB_OF[v] === btn.dataset.tab);
+      switchView(view);
+      setFocus('view');
+      paintSettingSel();
+    });
+  }
+
+  // 홀로그램 글리치: 몇 초마다 화면이 가로로 살짝 어긋났다 돌아온다 (캐릭터 홀로그램과 같은 느낌)
+  function startGlitch() {
+    const screen = el('screenWrap');
+    if (!screen || !document.documentElement.classList.contains('ui-holo')) return;
+    const once = () => {
+      const dir = Math.random() < 0.5 ? -1 : 1;
+      screen.style.setProperty('--glitch-x', `${dir * (2 + Math.random() * 4)}px`);
+      screen.style.setProperty('--slice-y', `${10 + Math.random() * 75}%`);
+      screen.style.setProperty('--slice-h', `${3 + Math.random() * 9}%`);
+      screen.classList.add('glitch');
+      setTimeout(() => screen.classList.remove('glitch'), 70 + Math.random() * 90);
+    };
+    const loop = () => {
+      once();
+      if (Math.random() < 0.35) setTimeout(once, 160);
+      setTimeout(loop, 2200 + Math.random() * 4200);
+    };
+    setTimeout(loop, 1500);
   }
 
   function stepView(step) {
@@ -721,7 +856,7 @@
     });
 
     // 메뉴 시트
-    el('menuClose').addEventListener('click', closeSheet);
+    el('menuClose').addEventListener('click', () => { if (app.view === 'settings') { switchView('tamagotchi'); setFocus('tabs'); } else closeSheet(); });
     el('careClose').addEventListener('click', closeSheet);
 
     el('settingsBtn').addEventListener('click', () => {
@@ -796,13 +931,19 @@
     });
 
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        if (!el('settingsModal').hidden) el('settingsModal').hidden = true;
-        else if (!el('popover').hidden) closePopover();
-        else if (app.sheet) closeSheet();
+      if (e.key === 'Escape') { holoBack(); return; }
+      if (e.target && e.target.tagName === 'INPUT') return;
+      // 홀로그램 3버튼과 같은 키: ← → = 이동, Enter = ✓
+      if (el('settingsModal').hidden && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        e.preventDefault();
+        holoMove(e.key === 'ArrowLeft' ? -1 : 1);
         return;
       }
-      if (e.target && e.target.tagName === 'INPUT') return;
+      if (el('settingsModal').hidden && e.key === 'Enter') {
+        e.preventDefault();
+        holoOk();
+        return;
+      }
       if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'PageUp' || e.key === 'PageDown') {
         if (!el('settingsModal').hidden) return;
         e.preventDefault();
@@ -881,7 +1022,10 @@
       theme: app.settings.theme || 'night'
     });
     bind();
+    bindHoloKeys();
+    setFocus('tabs');
     switchView(window.__PREVIEW_VIEW__ || app.view);
+    startGlitch();
     applyWindowMode('focus', false);
     renderAll();
     setInterval(renderClaudeCard, 5000);

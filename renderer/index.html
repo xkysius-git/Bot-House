@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" class="ui-holo">
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
@@ -15,6 +15,9 @@
       <!-- 2) 액정 (링 구멍에 정확히 정중앙으로 놓인다) -->
       <div class="screen" id="screenWrap">
         <div class="lcd" id="lcdScreen">
+                <nav class="holo-tabs" id="holoTabs" aria-label="화면">
+                  <button type="button" class="holo-tab" data-tab="room"><svg viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true"><rect x="5" y="1" width="2" height="1"/><rect x="4" y="2" width="4" height="1"/><rect x="3" y="3" width="6" height="1"/><rect x="2" y="4" width="8" height="1"/><rect x="1" y="5" width="10" height="1"/><rect x="2" y="6" width="1" height="5"/><rect x="9" y="6" width="1" height="5"/><rect x="2" y="10" width="8" height="1"/><rect x="5" y="7" width="2" height="4"/></svg><span>ROOM</span></button><button type="button" class="holo-tab on" data-tab="characters"><svg viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true"><rect x="3" y="1" width="1" height="1"/><rect x="8" y="1" width="1" height="1"/><rect x="3" y="2" width="1" height="1"/><rect x="8" y="2" width="1" height="1"/><rect x="2" y="3" width="8" height="1"/><rect x="1" y="4" width="1" height="5"/><rect x="10" y="4" width="1" height="5"/><rect x="2" y="9" width="8" height="1"/><rect x="4" y="5" width="1" height="1"/><rect x="7" y="5" width="1" height="1"/><rect x="4" y="7" width="4" height="1"/></svg><span>CHARACTERS</span></button><button type="button" class="holo-tab" data-tab="usage"><svg viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true"><rect x="1" y="10" width="10" height="1"/><rect x="2" y="7" width="2" height="3"/><rect x="5" y="5" width="2" height="5"/><rect x="8" y="2" width="2" height="8"/></svg><span>USAGE</span></button><button type="button" class="holo-tab" data-tab="settings"><svg viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true"><rect x="5" y="0" width="2" height="1"/><rect x="5" y="10" width="2" height="1"/><rect x="0" y="5" width="1" height="2"/><rect x="11" y="5" width="1" height="2"/><rect x="2" y="1" width="2" height="2"/><rect x="8" y="1" width="2" height="2"/><rect x="2" y="9" width="2" height="2"/><rect x="8" y="9" width="2" height="2"/><rect x="3" y="3" width="6" height="6"/><rect class="hole" x="5" y="5" width="2" height="2"/></svg><span>SETTINGS</span></button>
+                </nav>
                 <div class="lcd-top">
                   <div class="lcd-tabs" id="viewSwitch">
                     <button type="button" class="on" data-view="tamagotchi">홈</button>
@@ -181,7 +184,7 @@
                         <span class="tama-btn-label">재우기</span>
                       </button>
                     </div>
-                    <p class="care-hint" id="careHint">D-패드 ← → 로 고르고 A 로 실행해요</p>
+                    <p class="care-hint" id="careHint">← → 로 고르고 ✓ 로 실행 · ✓ 길게 누르면 뒤로</p>
                   </section>
 
                   <!-- 액정 시트: 클로드 로그 -->
@@ -199,8 +202,20 @@
                 </div>
 
                 <div class="lcd-glass" aria-hidden="true"></div>
+                <div class="holo-fx" id="holoFx" aria-hidden="true"><i class="holo-band"></i><i class="holo-slice"></i></div>
               </div>
         </div>
+
+      <!-- 홀로그램 투사 빛 + 3버튼 본체 -->
+      <div class="holo-cone" aria-hidden="true"></div>
+      <div class="holo-base" id="holoBase">
+        <div class="holo-emitter" aria-hidden="true"><i></i></div>
+        <div class="holo-keys">
+          <button class="holo-key" type="button" data-hkey="L" aria-label="왼쪽"><svg viewBox="0 0 12 12" shape-rendering="crispEdges"><rect x="1" y="5" width="10" height="2"/><rect x="2" y="4" width="1" height="4"/><rect x="3" y="3" width="1" height="6"/><rect x="4" y="2" width="1" height="8"/></svg></button>
+          <button class="holo-key ok" type="button" data-hkey="OK" aria-label="확인 (길게 누르면 뒤로)"><svg viewBox="0 0 12 12" shape-rendering="crispEdges"><rect x="1" y="6" width="2" height="2"/><rect x="2" y="7" width="2" height="2"/><rect x="3" y="8" width="2" height="2"/><rect x="4" y="9" width="2" height="1"/><rect x="5" y="7" width="2" height="2"/><rect x="6" y="6" width="2" height="2"/><rect x="7" y="4" width="2" height="2"/><rect x="8" y="3" width="2" height="2"/><rect x="9" y="2" width="2" height="2"/></svg></button>
+          <button class="holo-key" type="button" data-hkey="R" aria-label="오른쪽"><svg viewBox="0 0 12 12" shape-rendering="crispEdges"><rect x="1" y="5" width="10" height="2"/><rect x="9" y="4" width="1" height="4"/><rect x="8" y="3" width="1" height="6"/><rect x="7" y="2" width="1" height="8"/></svg></button>
+        </div>
+      </div>
 
       <!-- 3) 링 베젤 — 액정 위로 겹쳐지는 금속 링과 각인 -->
       <svg class="chassis ring" id="chassisRing" viewBox="0 0 580 450" aria-hidden="true"></svg>
