@@ -111,6 +111,20 @@
     return { img: sh.img, sx: r.frames[frame % r.frames.length] * sh.cell, sy: r.row * sh.cell, s: sh.cell, flip: sh.flip };
   }
 
+  function consonantCount() {
+    const c = state.consonants;
+    return c ? Math.floor(c.width / 128) : 0;
+  }
+
+  // 피클 감정 줄: 변신 3칸을 한 번 재생한 뒤 고른 자음으로 머문다.
+  function morphFrame(actor) {
+    const e = actor.emote;
+    if (!e || e.consonant < 0 || actor.anim !== 'emotion') return null;
+    const rel = (actor.frame - e.frame0 + 120) % 120; // frame은 120에서 0으로 돌아감
+    if (rel < 3) return frameOf(actor.def.id, 'emotion', Math.max(0, rel));
+    return { img: state.consonants, sx: e.consonant * 128, sy: 0, s: 128, flip: false };
+  }
+
   function hasEmotion(id) {
     const sh = state.sheets[id];
     return !!(sh && sh.rows && sh.rows.emotion);
@@ -304,6 +318,8 @@
 
     const sprites = await Promise.all(BOT_IDS.map((id) => loadImage(`../assets/sprites/${id}.png`)));
     BOT_IDS.forEach((id, i) => { state.sheets[id] = readSheet(sprites[i]); });
+    // 피클 변신: 감정 줄 앞 3칸(힘주기 → 부글부글 → 뿅) 뒤에 자음 14개 중 하나로 정착 (128칸 가로 띠)
+    state.consonants = await loadImage('../assets/sprites/oiji-consonants.png');
     await loadCustomRooms();
 
     const now = performance.now();
@@ -453,7 +469,11 @@
       actor.anim = 'idle';
       if (now > actor.nextEmote) {
         const kinds = ['heart', 'note', 'star', 'excl'];
-        actor.emote = { kind: kinds[Math.floor(Math.random() * kinds.length)], start: now, until: now + 1800 };
+        const morph = actor.def.id === 'oiji' && consonantCount() > 0;
+        actor.emote = {
+          kind: kinds[Math.floor(Math.random() * kinds.length)], start: now, until: now + (morph ? 3200 : 1800),
+          consonant: morph ? Math.floor(Math.random() * consonantCount()) : -1, frame0: actor.frame
+        };
         actor.hop = 1;
         actor.nextEmote = now + 7000 + Math.random() * 9000;
         return;
@@ -594,7 +614,7 @@
   function drawHologram(actor, now) {
     const g = state.ctx;
     const v = state.view;
-    const sp = frameOf(actor.def.id, actor.anim, actor.frame);
+    const sp = morphFrame(actor) || frameOf(actor.def.id, actor.anim, actor.frame);
     if (!sp) return;
     const k = v.dpr * v.scale;
     const sleeping = actor.room === 'bed' && !actor.queue.length;
