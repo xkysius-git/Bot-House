@@ -116,11 +116,22 @@
     return c ? Math.floor(c.width / 128) : 0;
   }
 
+  function emoteRows() {
+    const c = state.claudeEmotes;
+    return c ? Math.floor(c.height / 128) : 0;
+  }
+
   // 피클 감정 줄: 변신 3칸을 한 번 재생한 뒤 고른 자음으로 머문다.
+  // 클로드 감정: claude-emotes.png에서 고른 줄(8칸)을 반복 재생한다.
   function morphFrame(actor) {
     const e = actor.emote;
-    if (!e || e.consonant < 0 || actor.anim !== 'emotion') return null;
+    if (!e || actor.anim !== 'emotion') return null;
     const rel = (actor.frame - e.frame0 + 120) % 120; // frame은 120에서 0으로 돌아감
+    if (e.clipRow >= 0) {
+      const cols = Math.max(1, Math.floor(state.claudeEmotes.width / 128));
+      return { img: state.claudeEmotes, sx: (rel % cols) * 128, sy: e.clipRow * 128, s: 128, flip: true };
+    }
+    if (e.consonant < 0) return null;
     if (rel < 3) return frameOf(actor.def.id, 'emotion', Math.max(0, rel));
     return { img: state.consonants, sx: e.consonant * 128, sy: 0, s: 128, flip: false };
   }
@@ -320,6 +331,8 @@
     BOT_IDS.forEach((id, i) => { state.sheets[id] = readSheet(sprites[i]); });
     // 피클 변신: 감정 줄 앞 3칸(힘주기 → 부글부글 → 뿅) 뒤에 자음 14개 중 하나로 정착 (128칸 가로 띠)
     state.consonants = await loadImage('../assets/sprites/oiji-consonants.png');
+    // 클로드 감정: 공식 동작 여러 개(줄마다 8칸) 중 하나를 랜덤으로 재생
+    state.claudeEmotes = await loadImage('../assets/sprites/claude-emotes.png');
     await loadCustomRooms();
 
     const now = performance.now();
@@ -470,9 +483,13 @@
       if (now > actor.nextEmote) {
         const kinds = ['heart', 'note', 'star', 'excl'];
         const morph = actor.def.id === 'oiji' && consonantCount() > 0;
+        const clip = actor.def.id === 'claude' && emoteRows() > 0;
         actor.emote = {
-          kind: kinds[Math.floor(Math.random() * kinds.length)], start: now, until: now + (morph ? 3200 : 1800),
-          consonant: morph ? Math.floor(Math.random() * consonantCount()) : -1, frame0: actor.frame
+          kind: kinds[Math.floor(Math.random() * kinds.length)], start: now,
+          until: now + (morph ? 3200 : clip ? 2700 : 1800),
+          consonant: morph ? Math.floor(Math.random() * consonantCount()) : -1,
+          clipRow: clip ? Math.floor(Math.random() * emoteRows()) : -1,
+          frame0: actor.frame
         };
         actor.hop = 1;
         actor.nextEmote = now + 7000 + Math.random() * 9000;
