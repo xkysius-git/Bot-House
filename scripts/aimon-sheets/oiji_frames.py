@@ -45,19 +45,20 @@ def _asset(name):
 
 
 WHITE = (0xFD, 0xFD, 0xFE)
-RIM = (0x93, 0xA3, 0xBE)          # rim base: reads on both the cream and the dark LCD
-RIM_TOP = (0xB9, 0xC2, 0xE2)      # pale lavender at the crown
-RIM_HI = (0xD7, 0xDD, 0xF2)       # where the light hits (upper left)
-RIM_MINT = (0x9C, 0xCB, 0xC7)
-RIM_SKY = (0x9B, 0xB6, 0xDA)
-RIM_PINK = (0xCC, 0xB0, 0xC8)
-RIM_LAV = (0xB6, 0xBC, 0xE0)
-REFL = (0xD3, 0xDE, 0xF0)         # faint reflection on the lower right
+RIM = (0xA8, 0xC6, 0xEE)          # luminous icy-blue base rim
+RIM_TOP = (0xC6, 0x92, 0xFF)      # aurora violet
+RIM_HI = (0xFF, 0xFF, 0xFF)       # crisp specular highlight
+RIM_MINT = (0x5A, 0xF2, 0xD6)     # aurora emerald mint
+RIM_SKY = (0x6C, 0xD9, 0xFF)      # aurora cyan
+RIM_PINK = (0xFF, 0x8C, 0xD8)     # aurora magenta-pink
+RIM_LAV = (0xB8, 0xA6, 0xFF)      # soft aurora lavender
+RIM_GOLD = (0xFF, 0xE6, 0x94)     # warm champagne gold
+REFL = (0xFF, 0xB8, 0xE6)         # pink-lavender inner film reflection
 HALO = (0xAE, 0xBA, 0xCF)         # keyline under the black eyes
-TINT_MINT = (0xD6, 0xF0, 0xEC)
-TINT_PINK = (0xF6, 0xE0, 0xEE)
-TINT_LAV = (0xE0, 0xE2, 0xF6)
-TINT_GOLD = (0xF7, 0xF1, 0xDC)
+TINT_MINT = (0x7E, 0xF7, 0xE2)
+TINT_PINK = (0xFF, 0xAC, 0xE2)
+TINT_LAV = (0xD2, 0xB8, 0xFF)
+TINT_GOLD = (0xFF, 0xEC, 0xAD)
 EYE = (0x12, 0x12, 0x16)
 GLINT = (0xFF, 0xFF, 0xFF)
 ZCOL = (0xA9, 0xB6, 0xC9)
@@ -72,18 +73,20 @@ BODY = None          # filled in _build_base()
 SIL = None
 
 
-def _field(cx, cy, rx, ry, n=2.15, wob=0.0, phase=0.0):
-    """Normalised superellipse distance; <= 1 is inside the bubble.
+def _field(cx, cy, rx, ry, n=2.05, wob=0.0, phase=0.0):
+    """Normalised organic bubble distance; <= 1 is inside the bubble.
 
-    `wob` ripples the radius three times round the rim, which is what makes the
-    frame-2 silhouette look like it is boiling.
+    Even at rest (`wob=0`), subtle asymmetric harmonics keep the bubble from
+    looking like a rigid geometric circle.
     """
     yy, xx = np.mgrid[0:S, 0:S]
     d = (np.abs((xx - cx) / rx) ** n + np.abs((yy - cy) / ry) ** n) ** (1.0 / n)
+    th = np.arctan2(cy - yy, xx - cx)
+    organic = (0.032 * np.sin(2.0 * th + 0.7 + phase * 0.5)
+               + 0.022 * np.cos(3.0 * th - 0.5))
     if wob:
-        th = np.arctan2(cy - yy, xx - cx)
-        d = d / (1.0 + wob * np.sin(3.0 * th + phase))
-    return d
+        organic = organic + wob * np.sin(3.0 * th + phase)
+    return d / (1.0 + organic)
 
 
 def _super(cx, cy, rx, ry, n=2.15):
@@ -243,51 +246,84 @@ EYE_GAP = 5.0                       # eye pair = 5 + 5 + 5 = 15 of 36 px (42%)
 
 
 def bubble(cx=32.0, cy=CY, rx=RX, ry=RY, wob=0.0, phase=0.0, dots=True):
-    """A see-through soap bubble: hollow middle, thin iridescent rim, glints.
-
-    Only the rim (1px, with a 2nd px along the lower right), the white gloss blob
-    on the upper left and a faint reflection are opaque.  Everything else stays
-    alpha 0 so the room shows straight through the film.
+    """A see-through aurora soap bubble: hollow middle, organic silhouette,
+    multi-band iridescent aurora film along the rim, and crisp glints.
     """
     out = np.zeros((S, S, 4), np.uint8)
     body = _field(cx, cy, rx, ry, wob=wob, phase=phase) <= 1.0
     rim = body & ~_erode(body, 1)      # 4-connected: the 1px ring stays unbroken
     ang = _angle_map(cx, cy)
+    yy, xx = np.mgrid[0:S, 0:S]
 
-    # iridescent rim: pale lavender crown, mint left, sky bottom, pink lower right
+    # Aurora spectrum sweeping smoothly around the film
     col = np.empty((S, S, 3), float)
     col[:] = RIM
-    for centre, tint, w in ((92, RIM_TOP, 0.85), (158, RIM_HI, 0.7),
-                            (208, RIM_MINT, 0.7), (268, RIM_SKY, 0.85),
-                            (320, RIM_PINK, 0.5), (14, RIM_LAV, 0.75)):
-        c = np.clip(np.cos(np.radians(ang - centre)), 0.0, None) ** 2 * w
+    for centre, tint, w in (
+        (65, RIM_TOP, 0.90),
+        (128, RIM_SKY, 0.85),
+        (185, RIM_MINT, 0.95),
+        (248, RIM_GOLD, 0.80),
+        (312, RIM_PINK, 0.92),
+        (12, RIM_LAV, 0.85),
+    ):
+        c = np.clip(np.cos(np.radians(ang - centre)), 0.0, None) ** 1.8 * w
         col = col * (1 - c[..., None]) + np.array(tint, float) * c[..., None]
+
     out[rim, :3] = col[rim].round().astype(np.uint8)
     out[rim, 3] = 255
 
-    # the film thickens along the lower right where the light bends through it
-    thick = _band(body, 2, 2) & _in_arc(ang, 288, 24)
-    out[thick, :3] = REFL
-    out[thick, 3] = 255
+    # Layered aurora veil bleeding 2~3px inward on opposite crescents (dithered for transparency)
+    if rx > 12:
+        band2 = _band(body, 2, 2)
+        band3 = _band(body, 3, 3)
+        band4 = _band(body, 4, 4)
 
-    # upper-left gloss: a small rounded white blob hugging the rim, plus one fleck
-    gx = int(round(cx - rx * 0.68))
-    gy = int(round(cy - ry * 0.68))
-    for dx, dy in ((1, 0), (0, 0), (0, 1), (1, 1), (0, 2)):
-        x, y = gx + dx, gy + dy
-        if 0 <= y < S and 0 <= x < S and not out[y, x, 3]:
-            out[y, x] = (*GLINT, 255)
-    x, y = int(round(cx - rx * 0.86)), int(round(cy - ry * 0.42))
-    if 0 <= y < S and 0 <= x < S and not out[y, x, 3]:
-        out[y, x] = (*GLINT, 255)
+        # Crescent A (upper-left to left: mint -> cyan -> violet)
+        cresc_a = _in_arc(ang, 72, 212)
+        dither_a2 = cresc_a & (((xx + yy) % 2 == 0) | _in_arc(ang, 105, 175))
+        m_a2 = band2 & dither_a2
+        out[m_a2, :3] = col[m_a2].round().astype(np.uint8)
+        out[m_a2, 3] = 255
+
+        m_a3 = band3 & _in_arc(ang, 95, 190) & ((xx + yy) % 2 == 1)
+        out[m_a3, :3] = col[m_a3].round().astype(np.uint8)
+        out[m_a3, 3] = 255
+
+        # Crescent B (lower-right: pink -> gold -> lavender aurora ribbon)
+        cresc_b = _in_arc(ang, 255, 18)
+        m_b2 = band2 & cresc_b
+        out[m_b2, :3] = col[m_b2].round().astype(np.uint8)
+        out[m_b2, 3] = 255
+
+        m_b3 = band3 & _in_arc(ang, 278, 355) & ((xx + yy) % 2 == 0)
+        out[m_b3, :3] = col[m_b3].round().astype(np.uint8)
+        out[m_b3, 3] = 255
+
+        m_b4 = band4 & _in_arc(ang, 298, 336) & ((xx % 2 == 0) & (yy % 2 == 0))
+        out[m_b4, :3] = col[m_b4].round().astype(np.uint8)
+        out[m_b4, 3] = 255
+
+    # Curved white specular gloss hugging the upper-left aurora arc
+    for a in range(118, 162, 6):
+        rad = math.radians(a)
+        gx = int(round(cx + (rx - 2.2) * math.cos(rad)))
+        gy = int(round(cy - (ry - 2.2) * math.sin(rad)))
+        if 0 <= gy < S and 0 <= gx < S and body[gy, gx]:
+            out[gy, gx] = (*GLINT, 255)
+    # Small secondary white glint on upper-right rim
+    for dx, dy in ((0, 0), (1, 0)):
+        gx = int(round(cx + rx * 0.56)) + dx
+        gy = int(round(cy - ry * 0.62)) + dy
+        if 0 <= gy < S and 0 <= gx < S and body[gy, gx]:
+            out[gy, gx] = (*GLINT, 255)
 
     if dots and rx > 12:
-        # two 1px flecks caught on the film, well away from the hollow middle
-        for x, y, c in ((cx - rx * 0.30, cy - ry * 0.86, TINT_MINT),
-                        (cx + rx * 0.92, cy + ry * 0.36, TINT_PINK)):
-            yy, xx = int(round(y)), int(round(x))
-            if 0 <= yy < S and 0 <= xx < S and not out[yy, xx, 3]:
-                out[yy, xx] = (*c, 255)
+        # Subtle aurora flecks just outside/on the film
+        for x, y, c in ((cx - rx * 0.34, cy - ry * 0.88, TINT_MINT),
+                        (cx + rx * 0.94, cy + ry * 0.34, TINT_PINK)):
+            yy2, xx2 = int(round(y)), int(round(x))
+            if 0 <= yy2 < S and 0 <= xx2 < S and not out[yy2, xx2, 3]:
+                out[yy2, xx2] = (*c, 255)
     return out
 
 
@@ -441,6 +477,8 @@ def zeds(img, count, y0=32, x0=45):
                 break
             x += 3
             y -= 2
+        x = min(S - 12, max(2, x))
+        y = min(S - 8, max(2, y))
         A.zed(out, x, y, ZCOL)
     return out
 
