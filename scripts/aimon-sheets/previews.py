@@ -1,11 +1,21 @@
-"""Dark-background previews for the sprite sheets (sheet + 3-character line-up)."""
+"""Dark-background previews for the sprite sheets (sheet + 3-character line-up).
+
+    python3 previews.py <sheet dir> [name ...]
+
+Writes <name>-sheet-preview-dark.png for each sheet found and, when more than
+one sheet is present, all-sheets-preview-dark.png (the line-up used to check
+that the characters match each other in size).
+"""
+import os
 import sys
+
 from PIL import Image
 
 LABEL_H = 0
+BG = (21, 23, 31)
 
 
-def preview(sheet_path, out_path, bg=(21, 23, 31), scale=2):
+def preview(sheet_path, out_path, bg=BG, scale=2):
     sheet = Image.open(sheet_path).convert('RGBA')
     w, h = sheet.size
     back = Image.new('RGBA', (w, h), bg + (255,))
@@ -15,7 +25,7 @@ def preview(sheet_path, out_path, bg=(21, 23, 31), scale=2):
     return out_path
 
 
-def lineup(paths, out_path, bg=(21, 23, 31), scale=1):
+def lineup(paths, out_path, bg=BG, scale=1):
     ims = [Image.open(p).convert('RGBA') for p in paths]
     w = sum(i.size[0] for i in ims)
     h = max(i.size[1] for i in ims)
@@ -31,17 +41,21 @@ def lineup(paths, out_path, bg=(21, 23, 31), scale=1):
     return out_path
 
 
-if __name__ == '__main__':
-    src = 'work/BotHouse/assets/sprites'
-    names = ['oiji', 'sbji', 'takuan']
+def main(argv):
+    src = argv[1] if len(argv) > 1 else 'assets/sprites'
+    names = argv[2:] or ['oiji', 'sbji', 'takuan']
     made = []
     for n in names:
-        p = f'{src}/{n}-sheet-512x640.png'
-        try:
-            open(p, 'rb').close()
-        except FileNotFoundError:
+        p = os.path.join(src, f'{n}-sheet-512x640.png')
+        if not os.path.exists(p):
+            print('missing', p)
             continue
-        made.append(preview(p, f'{src}/{n}-sheet-preview-dark.png'))
-    if made:
-        lineup(made, f'{src}/all-sheets-preview-dark.png')
+        made.append(preview(p, os.path.join(src, f'{n}-sheet-preview-dark.png')))
+    if len(made) > 1:
+        made.append(lineup(made, os.path.join(src, 'all-sheets-preview-dark.png')))
     print('\n'.join(made))
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))
