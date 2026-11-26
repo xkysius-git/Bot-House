@@ -2262,3 +2262,42 @@ html.ui-holo.dev-art .hb-glow.l { left: 143px; top: 320px; width: 112px; height:
 html.ui-holo.dev-art .hb-glow.r { left: 372px; top: 327px; width: 107px; height: 216px; }
 html.ui-holo.dev-art .hb-glow.ok { left: 233px; top: 361px; width: 155px; height: 177px; opacity: 0; }
 html.ui-holo.dev-art .holo-base:has(.holo-key.ok.down) .hb-glow.ok { opacity: 1; }
+
+/* ================================================================
+   v1.0.11 피드백 (장현님 11-26)
+   ================================================================ */
+/* 1·2) 좌·우 키 = 위/아래 반 시소. 가운데 홈 선으로 나뉨, 누른 쪽으로 기울어짐 */
+html.ui-holo.dev-art .holo-key[data-hkey="L"]::after,
+html.ui-holo.dev-art .holo-key[data-hkey="R"]::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, transparent 49%, rgba(0, 0, 0, .6) 49%, rgba(0, 0, 0, .6) 50.6%, rgba(255, 255, 255, .14) 50.6%, rgba(255, 255, 255, .14) 51.6%, transparent 51.6%);
+  -webkit-mask: var(--k) 0 0 / 100% 100% no-repeat;
+}
+html.ui-holo.dev-art .holo-key[data-hkey="L"] { --k: var(--dev-keyL); }
+html.ui-holo.dev-art .holo-key[data-hkey="R"] { --k: var(--dev-keyR); }
+html.ui-holo.dev-art .holo-key.half-top.down { transform: perspective(420px) rotateX(9deg) translateY(2px); transform-origin: 50% 55%; }
+html.ui-holo.dev-art .holo-key.half-bot.down { transform: perspective(420px) rotateX(-9deg) translateY(2px); transform-origin: 50% 45%; }
+
+/* 4) 설정: 봇 상태·중복 줄·하단 링크 빼고 한 화면에 (스크롤 없음) */
+html.ui-holo .menu-sheet .card:has(#botList),
+html.ui-holo .menu-sheet #logBtn,
+html.ui-holo .menu-sheet .menu-foot,
+html.ui-holo .menu-sheet .kv,
+html.ui-holo .menu-sheet .sheet-head { display: none !important; }
+html.ui-holo .menu-sheet .sheet-body { overflow: hidden !important; display: flex; flex-direction: column; gap: 8px; padding-top: 8px; }
+/* 4) 사용량: 요약 + 카드 한 장 (아래 키로 넘김), 쪽 번호 표시 */
+html.ui-holo .usage-grid { display: block; position: relative; overflow: hidden; }
+html.ui-holo .usage-grid .usage-card { display: none; }
+html.ui-holo .usage-grid .usage-card.cur { display: block; }
+html.ui-holo .usage-grid[data-page]::after { content: attr(data-page); position: absolute; right: 8px; top: 6px; font: 700 11px/1 'Galmuri11', monospace; color: var(--dev-glow, #7fe6ff); text-shadow: 0 0 6px var(--dev-glow, #7fe6ff); }
+html.ui-holo .usage-note { display: none; }
+html.ui-holo .usage, html.ui-holo .lcd-body { overflow: hidden !important; }
+
+/* 6) UI 더 밝게, 글자 한 단계 크게 */
+html.ui-holo .lcd-body { zoom: 1.1; }
+html.ui-holo .holo-tab span { font-size: 11px; }
+html.ui-holo .lcd { filter: brightness(1.28) saturate(1.12); }
+html.ui-holo .lcd-body, html.ui-holo .holo-tabs { text-shadow: 0 0 5px color-mix(in srgb, var(--dev-glow, #7fe6ff) 55%, transparent); }
+html.ui-holo .holo-fx { opacity: .7; }
+html.ui-holo .usage-grid { padding-bottom: 16px; }
+html.ui-holo .usage-grid[data-page]::after { top: auto; bottom: 0; }

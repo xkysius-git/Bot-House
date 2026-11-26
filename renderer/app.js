@@ -554,12 +554,22 @@
     ].join('');
 
     grid.querySelectorAll('.avatar').forEach((node) => setAvatar(node, node.dataset.bot));
+    paintUsagePage();
     paintAvatars();
 
     const localNames = tools.filter((t) => t.installed).map((t) => t.name).join(' · ');
     el('usageNote').textContent = localNames
       ? `이 PC의 세션 기록(${localNames})에서 직접 합산했어요. 원격 봇은 로컬에서 셀 수 없어 상태 API로 받은 값만 표시해요.`
       : '이 PC에서 AI 도구의 세션 기록을 찾지 못했어요. 도구를 설치하고 한 번 사용하면 여기에 쌓여요.';
+  }
+
+  // 홀로그램: 사용량 카드는 한 장씩 (스크롤 없이 아래 키로 넘김)
+  function paintUsagePage() {
+    const cards = [...el('usageGrid').querySelectorAll('.usage-card')];
+    if (!cards.length) return;
+    app.usageIdx = ((app.usageIdx || 0) % cards.length + cards.length) % cards.length;
+    cards.forEach((c, i) => c.classList.toggle('cur', i === app.usageIdx));
+    el('usageGrid').dataset.page = (app.usageIdx + 1) + ' / ' + cards.length;
   }
 
   async function loadUsage(force = false) {
@@ -634,7 +644,7 @@
     const care = app.sheet === 'care';
     if (app.view === 'tamagotchi') { if (care) moveCare(step); else stepBot(step); }
     else if (app.view === 'house') { if (!el('popover').hidden) closePopover(); stepRoomBot(step); }
-    else if (app.view === 'usage') pageStep(step);
+    else if (app.view === 'usage') { if (document.documentElement.classList.contains('ui-holo')) { app.usageIdx = (app.usageIdx || 0) + step; paintUsagePage(); } else pageStep(step); }
     else if (app.view === 'settings') {
       if (app.sheet !== 'menu') return;
       app.settingIdx = (app.settingIdx + step + SETTING_ROWS.length) % SETTING_ROWS.length;
@@ -668,12 +678,22 @@
 
   function bindHoloKeys() {
     const ok = document.querySelector('.holo-key.ok');
+    // 좌·우 키는 위/아래 반으로 나뉜 시소: 윗쪽 = 메뉴(탭) 전환, 아랫쪽 = 메뉴 안 이동 (홀로그램을 만지지 않고 조작)
     document.querySelectorAll('.holo-key[data-hkey="L"], .holo-key[data-hkey="R"]').forEach((k) => {
+      k.addEventListener('pointerdown', (e) => {
+        const r = k.getBoundingClientRect();
+        k.dataset.half = (e.clientY - r.top) < r.height / 2 ? 'top' : 'bot';
+        k.classList.remove('half-top', 'half-bot');
+        k.classList.add('half-' + k.dataset.half);
+      });
       k.addEventListener('click', () => {
         if (window.Sfx) window.Sfx.play('click');
-        holoMove(k.dataset.hkey === 'L' ? -1 : 1);
+        const step = k.dataset.hkey === 'L' ? -1 : 1;
+        if (k.dataset.half === 'top') { stepTab(step); setFocus('view'); paintSettingSel(); }
+        else { if (app.focus === 'tabs') setFocus('view'); holoMove(step); }
       });
     });
+    document.addEventListener('pointerup', () => setTimeout(() => document.querySelectorAll('.holo-key.half-top, .holo-key.half-bot').forEach((k) => k.classList.remove('half-top', 'half-bot')), 180));
     if (!ok) return;
     let timer = null;
     let held = false;
@@ -1092,8 +1112,7 @@
     let timer = 0, long = false;
     b.addEventListener('pointerdown', () => { long = false; timer = setTimeout(() => {
       long = true;
-      if (b.dataset.act === 'power') { const q = document.getElementById('winClose'); if (q) q.click(); }
-      else nextColor();
+      if (b.dataset.act !== 'power') nextColor();
     }, 600); });
     const cancel = () => clearTimeout(timer);
     b.addEventListener('pointerleave', cancel);
@@ -1101,8 +1120,8 @@
     b.addEventListener('click', () => {
       clearTimeout(timer);
       if (long) return;
-      if (b.dataset.act === 'power') root.classList.toggle('holo-off');
-      else { const t = document.getElementById('themeBtn'); if (t) t.click(); }
+      const t = document.getElementById(b.dataset.act === 'power' ? 'winClose' : 'themeBtn');
+      if (t) t.click();
     });
   });
   // 기기 LCD: 홀로그램 탭과 같이 바뀌는 아이콘·이름·쪽 점

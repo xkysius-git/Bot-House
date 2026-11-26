@@ -378,10 +378,10 @@
 
   function resize() {
     if (!state.canvas || !state.scene) return;
-    const rect = state.scene.getBoundingClientRect();
     const dpr = Math.min(2, window.devicePixelRatio || 1);
-    const w = Math.max(1, Math.floor(rect.width));
-    const h = Math.max(1, Math.floor(rect.height));
+    // 회전 전환 중에도 정확한 크기 (transform 무시)
+    const w = Math.max(1, Math.floor(state.scene.offsetWidth || state.scene.getBoundingClientRect().width));
+    const h = Math.max(1, Math.floor(state.scene.offsetHeight || state.scene.getBoundingClientRect().height));
     state.canvas.width = Math.floor(w * dpr);
     state.canvas.height = Math.floor(h * dpr);
     const scale = Math.min(w / LW, h / LH);

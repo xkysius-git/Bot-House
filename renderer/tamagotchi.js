@@ -436,9 +436,9 @@
   /* ------------------------------------------------------- 렌더 */
   function resize() {
     if (!state.canvas || !state.screen) return;
-    const rect = state.screen.getBoundingClientRect();
-    const w = Math.max(1, Math.round(rect.width));
-    const h = Math.max(1, Math.round(rect.height));
+    // 화면 전환 회전(transform) 중에 재면 찌그러진 크기가 잡혀 캐릭터가 안 보임 → transform 영향 없는 레이아웃 크기 사용
+    const w = Math.max(1, Math.round(state.screen.offsetWidth || state.screen.getBoundingClientRect().width));
+    const h = Math.max(1, Math.round(state.screen.offsetHeight || state.screen.getBoundingClientRect().height));
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     state.canvas.width = Math.round(w * dpr);
     state.canvas.height = Math.round(h * dpr);
