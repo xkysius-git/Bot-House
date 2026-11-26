@@ -2364,3 +2364,10 @@ html.ui-holo .screen::before { clip-path: inset(0 0 calc(100% - 20px) 0 round 16
 html.ui-holo .screen::after { clip-path: inset(calc(100% - 20px) 0 0 0 round 0 0 16px 16px); }
 .tama-page { display: none; }
 html.ui-holo .tama-page { display: block; position: absolute; right: 10px; bottom: 42px; font: 700 11px/1 'Galmuri11', monospace; color: var(--dev-glow, #7fe6ff) !important; text-shadow: 0 0 6px var(--dev-glow, #7fe6ff); z-index: 5; pointer-events: none; }
+
+/* 룸: 방 하나씩 보기 — 지금 방 이름만 가운데, 양옆 화살표 */
+.zone-labels.cam { grid-template-columns: 1fr; }
+.zone-labels.cam .zone-label:not(.cur) { display: none; }
+.zone-labels.cam .zone-label.cur::before { content: "\25C0  "; opacity: .7; }
+.zone-labels.cam .zone-label.cur::after { content: "  \25B6"; opacity: .7; }
+html.ui-holo .zone-labels.cam .zone-label { font-size: 11px; padding: 2px 10px; }

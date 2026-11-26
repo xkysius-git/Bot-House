@@ -91,7 +91,7 @@
       const src = `url('../assets/sprites/${id}.png')`;
       if (node.style.backgroundImage !== src) node.style.backgroundImage = src;
       const st = (app.bots[id] && app.bots[id].state) || 'idle';
-      const anim = st === 'working' ? 'work' : st === 'offline' ? 'sleep' : 'idle';
+      const anim = st === 'working' ? 'work' : st === 'offline' || (app.bots[id] && app.bots[id].sleeping) ? 'sleep' : 'idle';
       const step = Math.floor(app.avatarFrame / (anim === 'work' ? 3 : 6));
       const size = Math.round(node.getBoundingClientRect().width) || 40;
       const dim = sheetDim(id);
@@ -643,7 +643,13 @@
     if (app.focus === 'tabs') { stepTab(step); return; }
     const care = app.sheet === 'care';
     if (app.view === 'tamagotchi') { if (care) moveCare(step); else stepBot(step); }
-    else if (app.view === 'house') { if (!el('popover').hidden) closePopover(); stepRoomBot(step); }
+    else if (app.view === 'house') {
+      if (!el('popover').hidden) closePopover();
+      // 아래 키 = 방 옮기기 (침실 ↔ 거실 ↔ 작업실). 옮긴 방의 첫 캐릭터를 고른다
+      const id = window.House.stepRoom ? window.House.stepRoom(step) : null;
+      if (window.House.stepRoom) { if (id) { app.selected = id; window.House.setSelected(id); renderAll(); } }
+      else stepRoomBot(step);
+    }
     else if (app.view === 'usage') { if (document.documentElement.classList.contains('ui-holo')) { app.usageIdx = (app.usageIdx || 0) + step; paintUsagePage(); } else pageStep(step); }
     else if (app.view === 'settings') {
       if (app.sheet !== 'menu') return;

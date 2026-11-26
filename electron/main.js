@@ -12,6 +12,7 @@ const { BOTS, initialBotState, isBot } = require('./bots');
 const { UsageMonitor } = require('./usage');
 const { ExternalClaudeWatcher } = require('./external-claude');
 const { TelegramChat } = require('./chat-telegram');
+const { ChatLogWatch } = require('./chatlog-watch');
 
 const ROOT = path.join(__dirname, '..');
 
@@ -25,7 +26,11 @@ const WORKING_WINDOW_MS = 25000;   // 최근 25초 안에 활동이 있으면 '�
 const SIGNAL_TTL_MS = 30 * 60 * 1000; // 외부에서 받은 상태는 30분 뒤 기본값으로
 const HEARTBEAT_TTL_MS = 10 * 60 * 1000; // 원격 봇이 10분 넘게 신호가 없으면 오프라인
 const GIST_POLL_MS = 60 * 1000;          // Gist 상태 확인 간격
-const EXTERNAL_WORKING_MS = 60 * 1000;   // 다른 창 세션: 대화 기록이 1분 안에 갱신되면 '작업 중'
+const EXTERNAL_WORKING_MS = 60 * 1000;
+const CHAT_ACTIVE_MS = 3 * 60 * 1000;    // 봇이 채팅에 말하면 3분은 '작업 중'
+const CHAT_TASK_MS = 30 * 60 * 1000;     // '작업 시작' 류 말은 완료 보고 전까지 최대 30분
+const SLEEP_AFTER_MS = 20 * 60 * 1000;   // 20분 넘게 조용하면 침실에서 잔다
+const CHATLOG_DIR_DEFAULT = process.platform === 'win32' ? 'C:\claude-telegram\chatlog' : '';   // 다른 창 세션: 대화 기록이 1분 안에 갱신되면 '작업 중'
 
 let win = null;
 let tray = null;
@@ -36,6 +41,7 @@ let statusPollTimer = null;
 let usageMonitor = null;
 let externalClaude = null;
 let chat = null;
+let chatLog = null;
 let quitting = false;
 let lastBotsPush = 0;
 
@@ -82,6 +88,10 @@ function computeBots() {
       } else {
         base.connected = true;
       }
+    } else if (sig.source === 'chat') {
+      base.state = sig.workUntil && now < sig.workUntil ? 'working' : 'idle';
+      if (base.state === 'idle' && sig.state === 'working') base.note = '휴게실에서 쉬는 중';
+      base.connected = true;
     } else {
       if (sig.updatedAt && now - sig.updatedAt > SIGNAL_TTL_MS && sig.source !== 'manual') {
         base.state = 'idle';
@@ -90,6 +100,9 @@ function computeBots() {
       }
       base.connected = true;
     }
+    // 오래 조용하면 침실에서 잔다 (작업 중·오프라인이 아닐 때만)
+    base.sleeping = base.state === 'idle' && Boolean(base.lastActivity) && now - base.lastActivity > SLEEP_AFTER_MS;
+    if (base.sleeping) base.note = '침실에서 자는 중';
     out[bot.id] = base;
   }
   return out;
@@ -188,22 +201,27 @@ function applyChatSignal(msg) {
   if (!def || def.id === 'claude') return;
   const sig = botSignals[def.id];
   const now = Date.now();
-  sig.lastActivity = Math.min(msg.date || now, now);
+  const at = Math.min(msg.date || now, now);
+  if (sig.lastActivity && at < sig.lastActivity) return; // 같은 메시지가 두 경로로 오거나 순서가 뒤집힌 경우
+  sig.lastActivity = at;
   // Gist 신호가 살아 있으면 그게 더 정확하니 활동 시각만 갱신
   if (sig.source === 'url' && sig.heartbeatAt && now - sig.heartbeatAt < HEARTBEAT_TTL_MS) { pushBots(true); return; }
   const text = msg.text || '';
   const firstLine = text.split('\n').find((l) => l.trim()) || '';
   if (DONE_WORDS.test(text)) {
+    sig.workUntil = 0;
     sig.state = 'idle';
     sig.note = `방금 보고 · ${firstLine.slice(0, 40)}`;
   } else if (START_WORDS.test(text)) {
+    sig.workUntil = at + CHAT_TASK_MS;
     sig.state = 'working';
     sig.note = firstLine.slice(0, 60);
-  } else if (sig.state !== 'working') {
-    sig.state = 'idle';
-    sig.note = '채팅방에서 대화 중';
+  } else {
+    sig.workUntil = Math.max(sig.workUntil || 0, at + CHAT_ACTIVE_MS);
+    if (sig.state !== 'working') sig.note = '채팅방에서 대화 중';
+    sig.state = 'working';
   }
-  sig.updatedAt = now; // 30분(SIGNAL_TTL_MS) 조용하면 기본 '쉬는 중'으로 돌아감
+  sig.updatedAt = at; // 30분(SIGNAL_TTL_MS) 조용하면 기본 '쉬는 중'으로 돌아감
   sig.source = 'chat';
   pushBots(true);
 }
@@ -711,6 +729,11 @@ if (!gotLock) {
     chat.on('message', (msg) => { send('chat:message', msg); applyChatSignal(msg); });
     chat.on('edited', (msg) => send('chat:edited', msg));
     chat.on('log', (line) => manager.log(line, 'warn'));
+
+    // 이 PC의 채팅 기록으로도 봇 활동을 읽는다 (앱 채팅 로그인 없이도 상태 반영)
+    chatLog = new ChatLogWatch(store.get('chatLogDir') || CHATLOG_DIR_DEFAULT);
+    chatLog.on('message', applyChatSignal);
+    if (chatLog.start()) manager.log('채팅 기록으로 봇 상태 읽는 중', 'info');
 
     manager.on('log', (entry) => send('log', entry));
     manager.on('state', () => {

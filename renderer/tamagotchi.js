@@ -57,7 +57,8 @@
     view: { w: 1, h: 1, s: 1, lh: 108, dpr: 1 },
     last: 0, lastHud: 0, nextNag: 0,
     slotEls: {}, cellEls: {}, meterEls: {}, faceEls: [],
-    nodes: {}
+    nodes: {},
+    extra: {}, emote: null, nextEmote: 0
   };
 
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -122,7 +123,7 @@
   function lookOf(id) {
     const st = botState(id);
     if (st === 'working') return 'work';
-    if (careOf(id).sleeping) return 'sleep';
+    if (careOf(id).sleeping || (state.bots[id] && state.bots[id].sleeping)) return 'sleep';
     if (st === 'offline') return 'offline';
     return 'idle';
   }
@@ -257,6 +258,7 @@
       c.mood = clamp(c.mood + 10, 0, 100);
       c.energy = clamp(c.energy + 1, 0, 100);
       hop(); hearts(5);
+      if (lookOf(id) === 'idle') startEmote(performance.now() / 1000, 'heart');
       setBubble(rnd(LINES.pet[id] || LINES.pet.oiji));
     } else if (kind === 'snack') {
       if (c.energy >= 98) { setBubble('배불러', 1.8); hop(); hearts(2); return; }
@@ -269,6 +271,7 @@
       c.mood = clamp(c.mood + 14, 0, 100);
       c.energy = clamp(c.energy + 2, 0, 100);
       hop(); confetti(16); sparkles(6);
+      if (lookOf(id) === 'idle') startEmote(performance.now() / 1000, 'star');
       setBubble(rnd(LINES.cheer[id] || LINES.cheer.oiji));
     } else if (kind === 'sleep') {
       if (st === 'working') { setBubble('아직 작업 중이야', 1.8); return; }
@@ -293,6 +296,8 @@
     }
     state.focus = id;
     state.effects = [];
+    state.emote = null;
+    state.nextEmote = 0;
     setBubble(null);
     if (state.mode !== 'focus') setMode('focus');
     paintSelection();
@@ -680,6 +685,57 @@
     }
   }
 
+  // 감정표현 — 룸과 같은 소스: 시트 감정 줄, 피클 자음 변신, 클로드 감정 클립, 떠오르는 아이콘
+  const EMO_ICONS = {
+    heart: { color: '#ff6b8b', art: ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'] },
+    note: { color: '#ffd166', art: ['..####', '..#..#', '..#..#', '###.##', '##..##'] },
+    star: { color: '#fff3a0', art: ['...#...', '..###..', '#######', '.#####.', '.##.##.'] },
+    excl: { color: '#7ff6ff', art: ['##', '##', '##', '..', '##'] }
+  };
+  function startEmote(now, kind) {
+    const id = state.focus;
+    const cons = state.extra.consonants;
+    const clips = state.extra.claudeEmotes;
+    const morph = id === 'oiji' && cons ? Math.floor(cons.width / GRID_CELL) : 0;
+    const rows = id === 'claude' && clips ? Math.floor(clips.height / GRID_CELL) : 0;
+    const kinds = Object.keys(EMO_ICONS);
+    state.emote = {
+      id, start: now,
+      until: now + (morph ? 3.2 : rows ? 2.7 : 2.2),
+      kind: kind || kinds[Math.floor(Math.random() * kinds.length)],
+      consonant: morph ? Math.floor(Math.random() * morph) : -1,
+      clipRow: rows ? Math.floor(Math.random() * rows) : -1
+    };
+    state.nextEmote = state.emote.until + 5 + Math.random() * 7;
+    hop();
+  }
+  function emoteCell(img, now) {
+    const e = state.emote;
+    const k = Math.floor((now - e.start) * 8);
+    if (e.clipRow >= 0) {
+      const clips = state.extra.claudeEmotes;
+      const cols = Math.max(1, Math.floor(clips.width / GRID_CELL));
+      return { img: clips, sx: (k % cols) * GRID_CELL, sy: e.clipRow * GRID_CELL, s: GRID_CELL };
+    }
+    if (e.consonant >= 0 && k >= 3) {
+      return { img: state.extra.consonants, sx: e.consonant * GRID_CELL, sy: 0, s: GRID_CELL };
+    }
+    const c = cellOf(img, 'emotion', k);
+    return { img, sx: c.sx, sy: c.sy, s: c.s };
+  }
+  function drawEmoteIcon(ctx, now, cx, top, sp) {
+    const e = state.emote;
+    const ic = EMO_ICONS[e.kind];
+    if (!ic) return;
+    const t = clamp((now - e.start) / (e.until - e.start), 0, 1);
+    const sc = Math.max(1, Math.round(sp / 40));
+    const w = ic.art[0].length * sc;
+    ctx.save();
+    ctx.globalAlpha = t < 0.8 ? 1 : (1 - t) * 5;
+    drawArt(ctx, ic.art, Math.round(cx + sp * 0.28 - w / 2), Math.round(top - 2 - t * 8 - ic.art.length * sc), sc, ic.color);
+    ctx.restore();
+  }
+
   function drawCharacter(ctx, now, dt) {
     const id = state.focus;
     const img = spriteImg(id);
@@ -692,8 +748,17 @@
     let anim = 'idle';
     if (look === 'work') anim = 'work';
     else if (look === 'sleep' || look === 'offline') anim = 'sleep';
-    const cell = cellOf(img, anim, step);
+    let cell = cellOf(img, anim, step);
     const grid = cell.grid;
+    if (state.emote && (state.emote.id !== id || now > state.emote.until || anim !== 'idle')) state.emote = null;
+    if (!state.emote && anim === 'idle' && grid && state.nextEmote && now > state.nextEmote) startEmote(now);
+    if (!state.nextEmote) state.nextEmote = now + 2 + Math.random() * 3;
+    let src = img;
+    if (state.emote && grid) {
+      const ec = emoteCell(img, now);
+      src = ec.img;
+      cell = { sx: ec.sx, sy: ec.sy, s: ec.s, grid: true };
+    }
 
     const bob = look === 'idle' ? Math.round(Math.sin(now * 2.2)) : 0;
     if (state.hop.t < state.hop.dur) state.hop.t += dt;
@@ -740,9 +805,10 @@
       if (state.chewing > 0 && Math.random() < 0.55) {
         ctx.translate(0, Math.random() < 0.5 ? -1 : 0);
       }
-      ctx.drawImage(img, cell.sx, cell.sy, cell.s, cell.s, Math.round(cx - sp / 2), Math.round(y), sp, sp);
+      ctx.drawImage(src, cell.sx, cell.sy, cell.s, cell.s, Math.round(cx - sp / 2), Math.round(y), sp, sp);
       ctx.restore();
     }
+    if (state.emote) drawEmoteIcon(ctx, now, cx, y, sp);
 
     // 잠자는 모습 — 이불 덮기 (새 시트는 잠 동작·Z가 그림에 있음)
     if ((look === 'sleep' || look === 'offline') && !grid) {
@@ -1051,6 +1117,13 @@
       img.onload = () => { state.images[id] = img; resolve(); };
       img.onerror = () => resolve();
       img.src = `../assets/sprites/${id}.png`;
+    })));
+
+    await Promise.all([['consonants', 'oiji-consonants'], ['claudeEmotes', 'claude-emotes']].map(([key, file]) => new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => { state.extra[key] = img; resolve(); };
+      img.onerror = () => resolve();
+      img.src = `../assets/sprites/${file}.png`;
     })));
 
     loadCare();

@@ -32,6 +32,9 @@
   };
   const LIVING_BOX = { x0: 182, x1: 298, y0: 198, y1: 236 };
   const HOLO = '#7ff6ff';
+  // 방 하나씩 보기: 화면 폭에 방 하나(+양옆 조금)를 꽉 채우고, 아래 키로 방을 옮긴다
+  const CAM_VIEW_W = ROOM_W + 48;
+  const CAM_Y = { bed: 182, living: 190, work: 186 };
 
   const state = {
     canvas: null,
@@ -50,7 +53,8 @@
     raf: null,
     lastT: 0,
     bubbleEls: new Map(),
-    particles: []
+    particles: [],
+    cam: { room: 'living', x: ROOM_X.living + ROOM_W / 2, y: 190 }
   };
 
   function loadImage(src) {
@@ -384,9 +388,47 @@
     const h = Math.max(1, Math.floor(state.scene.offsetHeight || state.scene.getBoundingClientRect().height));
     state.canvas.width = Math.floor(w * dpr);
     state.canvas.height = Math.floor(h * dpr);
-    const scale = Math.min(w / LW, h / LH);
-    state.view = { w, h, dpr, scale, ox: (w - LW * scale) / 2, oy: (h - LH * scale) / 2 };
+    const scale = Math.max(w / CAM_VIEW_W, h / LH);
+    state.view = { w, h, dpr, scale, ox: 0, oy: 0 };
+    placeCamera(true);
   }
+
+  function placeCamera(snap, dt) {
+    const v = state.view;
+    if (!v.scale) return;
+    const c = state.cam;
+    const tx = ROOM_X[c.room] + ROOM_W / 2;
+    const ty = CAM_Y[c.room] || 190;
+    const f = snap ? 1 : Math.min(1, (dt || 0.016) * 7);
+    c.x += (tx - c.x) * f;
+    c.y += (ty - c.y) * f;
+    const ox = v.w / 2 - c.x * v.scale;
+    const oy = v.h / 2 - c.y * v.scale;
+    v.ox = Math.min(0, Math.max(v.w - LW * v.scale, ox));
+    v.oy = Math.min(0, Math.max(v.h - LH * v.scale, oy));
+    paintRoomLabels();
+  }
+
+  function paintRoomLabels() {
+    const box = state.scene && state.scene.querySelector('.zone-labels');
+    if (!box) return;
+    box.classList.add('cam');
+    box.querySelectorAll('.zone-label').forEach((el, i) => el.classList.toggle('cur', ROOMS[i] === state.cam.room));
+  }
+
+  // 방 옮기기 (step = -1 왼쪽 / +1 오른쪽). 옮긴 방에 있는 첫 캐릭터 id를 돌려준다.
+  function stepRoom(step) {
+    const i = ROOMS.indexOf(state.cam.room);
+    state.cam.room = ROOMS[(i + step + ROOMS.length) % ROOMS.length];
+    paintRoomLabels();
+    return botsIn(state.cam.room)[0] || null;
+  }
+
+  function botsIn(room) {
+    return BOT_IDS.filter((id) => { const a = state.actors.get(id); return a && a.room === room; });
+  }
+
+  function currentRoom() { return state.cam.room; }
 
   function setTheme(theme) { state.theme = theme === 'day' ? 'day' : 'night'; }
   function setBots(bots) { state.botStates = bots || {}; }
@@ -396,7 +438,7 @@
   function roomFor(bs) {
     const st = bs && bs.state;
     if (st === 'working') return 'work';
-    if (st === 'offline') return 'bed';
+    if (st === 'offline' || (bs && bs.sleeping)) return 'bed';
     return 'living';
   }
 
@@ -833,6 +875,7 @@
           actor.frame = (actor.frame + 1) % 120;
         }
       }
+      placeCamera(false, dt);
       render(now, dt);
       updateBubbles();
     }
@@ -880,5 +923,5 @@
     return { x: rect.left + p.x, y: rect.top + p.y };
   }
 
-  window.House = { init, setBots, setTheme, setSelected, anchorOf };
+  window.House = { init, setBots, setTheme, setSelected, anchorOf, stepRoom, botsIn, currentRoom };
 })();

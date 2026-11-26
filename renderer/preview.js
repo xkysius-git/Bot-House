@@ -15,12 +15,12 @@
   ];
 
   const params = new URLSearchParams(location.search);
-  const demo = params.get('demo') || 'idle';
+  const demo = params.get('demo') || 'live';
   window.__PREVIEW_VIEW__ = params.get('view') || '';
 
   let bots = {
     oiji: { state: 'idle', note: '휴게실에서 쉬는 중', lastActivity: Date.now() - 1000 * 60 * 12, connected: true },
-    takuan: { state: 'idle', note: '휴게실에서 쉬는 중', lastActivity: Date.now() - 1000 * 60 * 4, connected: true },
+    takuan: { state: 'idle', note: '침실에서 자는 중', lastActivity: Date.now() - 1000 * 60 * 34, connected: true, sleeping: true },
     sbji: { state: demo === 'idle' ? 'idle' : 'working', note: demo === 'idle' ? '휴게실에서 쉬는 중' : '카톡 대화록 분석', lastActivity: Date.now() - 1000 * 40, connected: true },
     claude: { state: demo === 'idle' ? 'idle' : 'working', note: demo === 'idle' ? '채널 연결됨' : '여수 하프 훈련표 정리', lastActivity: Date.now() - 1000 * 12, connected: true, connection: 'running' }
   };
