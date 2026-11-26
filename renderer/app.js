@@ -391,7 +391,7 @@
   }
 
   function applyTheme(theme) {
-    const mode = theme === 'day' ? 'day' : 'night';
+    const mode = 'night'; // 낮 모드 삭제 (장현님 11-26: 홀로그램 콘셉트와 안 맞음)
     document.body.className = `theme-${mode}`;
     el('themeLabel').textContent = mode === 'day' ? '낮' : '밤';
     window.House.setTheme(mode);
@@ -680,12 +680,6 @@
     const ok = document.querySelector('.holo-key.ok');
     // 좌·우 키는 위/아래 반으로 나뉜 시소: 윗쪽 = 메뉴(탭) 전환, 아랫쪽 = 메뉴 안 이동 (홀로그램을 만지지 않고 조작)
     document.querySelectorAll('.holo-key[data-hkey="L"], .holo-key[data-hkey="R"]').forEach((k) => {
-      k.addEventListener('pointerdown', (e) => {
-        const r = k.getBoundingClientRect();
-        k.dataset.half = (e.clientY - r.top) < r.height / 2 ? 'top' : 'bot';
-        k.classList.remove('half-top', 'half-bot');
-        k.classList.add('half-' + k.dataset.half);
-      });
       k.addEventListener('click', () => {
         if (window.Sfx) window.Sfx.play('click');
         const step = k.dataset.hkey === 'L' ? -1 : 1;
@@ -693,7 +687,7 @@
         else { if (app.focus === 'tabs') setFocus('view'); holoMove(step); }
       });
     });
-    document.addEventListener('pointerup', () => setTimeout(() => document.querySelectorAll('.holo-key.half-top, .holo-key.half-bot').forEach((k) => k.classList.remove('half-top', 'half-bot')), 180));
+
     if (!ok) return;
     let timer = null;
     let held = false;
@@ -1109,19 +1103,10 @@
   };
   // 윗면 버튼: 짧게 = 기본 동작, 길게(0.6초) = 보조 동작
   document.querySelectorAll('.hb-top').forEach((b) => {
-    let timer = 0, long = false;
-    b.addEventListener('pointerdown', () => { long = false; timer = setTimeout(() => {
-      long = true;
-      if (b.dataset.act !== 'power') nextColor();
-    }, 600); });
-    const cancel = () => clearTimeout(timer);
-    b.addEventListener('pointerleave', cancel);
-    b.addEventListener('pointercancel', cancel);
     b.addEventListener('click', () => {
-      clearTimeout(timer);
-      if (long) return;
-      const t = document.getElementById(b.dataset.act === 'power' ? 'winClose' : 'themeBtn');
-      if (t) t.click();
+      if (window.Sfx) window.Sfx.play('click');
+      if (b.dataset.act === 'color') nextColor();
+      else root.classList.toggle('holo-off');
     });
   });
   // 기기 LCD: 홀로그램 탭과 같이 바뀌는 아이콘·이름·쪽 점
@@ -1147,4 +1132,19 @@
     root.dataset.dev = c;
     try { localStorage.setItem(KEY, c); } catch (err) { /* 무시 */ }
   });
+})();
+
+/* 캐릭터 화면 쪽 번호 (오이지 피드백 3210): 오른쪽 아래에 "현재 / 전체" */
+(function () {
+  const view = document.getElementById('tamaView');
+  if (!view) return;
+  const tag = document.createElement('span');
+  tag.className = 'tama-page';
+  view.appendChild(tag);
+  const ids = ['oiji', 'takuan', 'sbji', 'claude'];
+  setInterval(() => {
+    if (!window.Tama || view.hidden) return;
+    const i = ids.indexOf(window.Tama.focusId());
+    tag.textContent = (i < 0 ? 1 : i + 1) + ' / ' + ids.length;
+  }, 250);
 })();

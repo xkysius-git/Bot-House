@@ -665,7 +665,7 @@
       g.imageSmoothingEnabled = false;
       g.drawImage(c, px, py);
       g.restore();
-      drawActorExtras(actor, g, ly);
+      drawActorExtras(actor, g, ly, now);
       return;
     }
     // 홀로그램 색: 원래 색을 살리고 청록빛을 얹는다
@@ -713,10 +713,10 @@
       g.drawImage(c, dx, dy);
     }
     g.restore();
-    drawActorExtras(actor, g, ly);
+    drawActorExtras(actor, g, ly, now);
   }
 
-  function drawActorExtras(actor, g, ly) {
+  function drawActorExtras(actor, g, ly, now) {
     if (actor.def.id === state.selected) {
       g.save();
       g.strokeStyle = 'rgba(255, 122, 89, .9)';
