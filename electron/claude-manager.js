@@ -28,6 +28,7 @@ const LEGACY_CONSOLE_TITLES = ['BotHouse Claude Channel'];
 // MCP(텔레그램 채널) 첫 연결 제한시간. 기본 30초는 Windows 콘솔 창에서 빠듯해서 90초로 늘린다.
 const DEFAULT_MCP_TIMEOUT = '90000';
 const MCP_TIMEOUT = process.env.MCP_TIMEOUT || DEFAULT_MCP_TIMEOUT;
+const MISSES_BEFORE_GONE = 3;        // 채널 프로세스를 연속 3번(약 24초) 못 찾아야 끊긴 것으로 본다
 const WINDOW_POLL_MS = 8000;          // 창 모드에서 채널이 살아 있는지 확인하는 간격
 const WINDOW_START_TIMEOUT_MS = 12000; // 창을 띄운 뒤 이만큼 지나도 채널이 안 보이면 오류로 본다
 // Windows Terminal로 띄울 때 쓰는 실행 배치 파일 이름. 종료할 때 이 이름으로 우리 cmd만 골라 닫는다.
@@ -499,6 +500,7 @@ class ClaudeManager extends EventEmitter {
       const pids = await this.listChannels();
       if (pids === null) return;
       if (pids.length) {
+        this.missCount = 0;
         this.claudePid = pids[0];
         if (this.status === 'starting' || this.status === 'retrying') {
           this.setStatus('running', '최소화된 터미널 창에서 실행 중');
@@ -515,7 +517,14 @@ class ClaudeManager extends EventEmitter {
         return;
       }
 
-      if (this.status === 'running') this.onConsoleGone();
+      // 한 번 못 찾았다고 바로 끊김으로 보지 않는다. 프로세스 조회가 잠깐 빈 결과를 내면
+      // 살아 있는 채널 창을 닫고 다시 띄우게 된다. 연속으로 없을 때만 끝난 것으로 본다.
+      if (this.status === 'running') {
+        this.missCount = (this.missCount || 0) + 1;
+        if (this.missCount < MISSES_BEFORE_GONE) return;
+        this.missCount = 0;
+        this.onConsoleGone();
+      }
     } finally {
       this.checking = false;
     }

@@ -411,13 +411,7 @@ function createWindow() {
     if (quitting) return;
     if (store.get('minimizeToTray')) {
       event.preventDefault();
-      win.hide();
-      if (tray && process.platform === 'win32') {
-        tray.displayBalloon?.({
-          title: 'A.I.Mon',
-          content: '창을 닫아도 봇들은 계속 집에 있어요. 트레이에서 다시 열 수 있어요.'
-        });
-      }
+      win.hide(); // 따로 알림 풍선은 띄우지 않는다 (기기 밖 팝업 금지)
     }
   });
 
