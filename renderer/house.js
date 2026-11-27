@@ -33,7 +33,9 @@
   const LIVING_BOX = { x0: 182, x1: 298, y0: 198, y1: 236 };
   const HOLO = '#7ff6ff';
   // 방 하나씩 보기: 화면 폭에 방 하나(+양옆 조금)를 꽉 채우고, 아래 키로 방을 옮긴다
-  const CAM_VIEW_W = ROOM_W * 2;   // 방 하나 + 양옆 반 칸: 가구·인테리어가 보이게 (장현님 11-27: 너무 확대)
+  // 기본은 집 전체(방 3개)를 한 화면에, 아래 ◀ ▶ 로 캐릭터 하나씩 클로즈업 (장현님 11-27)
+  const FOCUS_ZOOM = 3;      // 클로즈업 배율 (전체 보기 대비)
+  const FOCUS_AT = 0.33;     // 클로즈업한 캐릭터가 설 가로 위치 (오른쪽은 상태 카드 자리)
   const CAM_Y = { bed: 182, living: 190, work: 186 };
 
   const state = {
@@ -54,7 +56,7 @@
     lastT: 0,
     bubbleEls: new Map(),
     particles: [],
-    cam: { room: 'living', x: ROOM_X.living + ROOM_W / 2, y: 190 }
+    cam: { room: 'living', x: LW / 2, y: LH / 2, follow: null }
   };
 
   function loadImage(src) {
@@ -388,8 +390,9 @@
     const h = Math.max(1, Math.floor(state.scene.offsetHeight || state.scene.getBoundingClientRect().height));
     state.canvas.width = Math.floor(w * dpr);
     state.canvas.height = Math.floor(h * dpr);
-    const scale = Math.max(w / CAM_VIEW_W, h / LH);
-    state.view = { w, h, dpr, scale, ox: 0, oy: 0 };
+    const fit = Math.min(w / LW, h / LH);
+    const scale = state.cam.follow ? fit * FOCUS_ZOOM : fit;
+    state.view = { w, h, dpr, fit, scale, ox: 0, oy: 0 };
     placeCamera(true);
   }
 
@@ -397,23 +400,36 @@
     const v = state.view;
     if (!v.scale) return;
     const c = state.cam;
-    const tx = ROOM_X[c.room] + ROOM_W / 2;
-    const ty = CAM_Y[c.room] || 190;
-    const f = snap ? 1 : Math.min(1, (dt || 0.016) * 7);
+    const follow = c.follow ? state.actors.get(c.follow) : null;
+    const f = snap ? 1 : Math.min(1, (dt || 0.016) * 6);
+    const target = follow ? v.fit * FOCUS_ZOOM : v.fit;
+    v.scale += (target - v.scale) * f;
+    let tx = LW / 2;
+    let ty = LH / 2;
+    if (follow) {
+      // 캐릭터를 화면 가운데보다 왼쪽(FOCUS_AT)에 세운다
+      tx = follow.x + (0.5 - FOCUS_AT) * v.w / v.scale;
+      ty = follow.y - DRAW * 0.6;
+    }
     c.x += (tx - c.x) * f;
     c.y += (ty - c.y) * f;
     const ox = v.w / 2 - c.x * v.scale;
     const oy = v.h / 2 - c.y * v.scale;
-    v.ox = Math.min(0, Math.max(v.w - LW * v.scale, ox));
-    v.oy = Math.min(0, Math.max(v.h - LH * v.scale, oy));
+    const fw = LW * v.scale;
+    const fh = LH * v.scale;
+    // 집이 화면보다 작으면 가운데, 크면 끝이 화면 안쪽으로 들어오지 않게.
+    // 클로즈업 중에는 오른쪽 끝 캐릭터도 왼쪽에 세울 수 있게 오른쪽을 상태 카드 폭만큼 더 허용
+    const minX = v.w - fw - (follow ? v.w * 0.4 : 0);
+    v.ox = fw <= v.w ? (v.w - fw) / 2 : Math.min(0, Math.max(minX, ox));
+    v.oy = fh <= v.h ? (v.h - fh) / 2 : Math.min(0, Math.max(v.h - fh, oy));
     paintRoomLabels();
   }
 
   function paintRoomLabels() {
     const box = state.scene && state.scene.querySelector('.zone-labels');
     if (!box) return;
-    box.classList.add('cam');
-    box.querySelectorAll('.zone-label').forEach((el, i) => el.classList.toggle('cur', ROOMS[i] === state.cam.room));
+    box.classList.remove('cam');
+    box.hidden = !!state.cam.follow;
   }
 
   // 방 옮기기 (step = -1 왼쪽 / +1 오른쪽). 옮긴 방에 있는 첫 캐릭터 id를 돌려준다.
@@ -429,6 +445,14 @@
   }
 
   function currentRoom() { return state.cam.room; }
+
+  // 캐릭터 클로즈업 (id) / 전체 보기 (null)
+  function focusBot(id) {
+    state.cam.follow = id && state.actors.has(id) ? id : null;
+    paintRoomLabels();
+    return state.cam.follow;
+  }
+  function focused() { return state.cam.follow || null; }
 
   function setTheme(theme) { state.theme = theme === 'day' ? 'day' : 'night'; }
   function setBots(bots) { state.botStates = bots || {}; }
@@ -923,5 +947,5 @@
     return { x: rect.left + p.x, y: rect.top + p.y };
   }
 
-  window.House = { init, setBots, setTheme, setSelected, anchorOf, stepRoom, botsIn, currentRoom };
+  window.House = { init, setBots, setTheme, setSelected, anchorOf, stepRoom, botsIn, currentRoom, focusBot, focused };
 })();

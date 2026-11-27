@@ -2523,3 +2523,7 @@ html.ui-holo .lcd > .modal input[type="text"]:focus { outline: 1.5px solid #fff;
 /* Mons 말풍선: 홀로그램에서는 머리 오른쪽 (윗줄 글자 가리지 않게) */
 html.ui-holo .tama-bubble.side { transform: translate(0, -50%) !important; }
 html.ui-holo .tama-bubble.side::after { display: none; }
+
+/* 13) ROOM 클로즈업 상태 카드: 오른쪽 고정 */
+html.ui-holo .lcd > .popover.dock { left: auto !important; right: 10px; width: 40%; max-width: 200px; }
+html.ui-holo .lcd > .popover.dock #popToggle { display: none; }

@@ -362,6 +362,14 @@
 
     const pop = el('popover');
     pop.hidden = false;
+    // 홀로그램 ROOM 클로즈업: 상태 카드는 오른쪽에 고정
+    const dock = isHolo() && app.view === 'house' && pop.parentElement === el('lcdScreen');
+    pop.classList.toggle('dock', dock);
+    if (dock) {
+      pop.style.left = '';
+      pop.style.top = `${lcdTopHeight() + 10}px`;
+      return;
+    }
     const anchor = (app.view === 'tamagotchi' && window.Tama ? window.Tama.anchorOf(id) : null)
       || window.House.anchorOf(id)
       || { x: window.innerWidth / 2, y: window.innerHeight / 2 };
@@ -397,7 +405,7 @@
     lcd.appendChild(el('settingsModal'));
     // 홀로그램은 만지지 않는다: 안내 문구도 기기 버튼 기준으로
     const hint = el('sceneHint');
-    if (hint) hint.textContent = '아래 ◀ ▶ 방 옮기기 · ✓ 캐릭터 상태 보기';
+    if (hint) hint.textContent = '아래 ◀ ▶ 캐릭터 가까이 보기 · ✓ 집 전체';
     paintEmoteBar();
   }
 
@@ -745,6 +753,21 @@
     paintModalSel();
   }
 
+  function stepIn(list, cur, step) {
+    const i = Math.max(0, list.indexOf(cur));
+    return list[(i + step + list.length) % list.length];
+  }
+
+  // ROOM 클로즈업: id = 그 캐릭터 가까이 + 오른쪽 상태 카드, null = 집 전체
+  function roomFocus(id) {
+    window.House.focusBot(id);
+    if (id) openPopover(id);
+    else if (!el('popover').hidden) closePopover();
+    app.selected = id;
+    window.House.setSelected(id);
+    renderAll();
+  }
+
   function holoMove(step) {
     if (!el('settingsModal').hidden) { moveModal(step); return; }
     if (app.focus === 'tabs') { stepTab(step); return; }
@@ -752,6 +775,10 @@
     if (app.view === 'tamagotchi') {
       if (isHolo()) { app.emoIdx = (app.emoIdx || 0) + step; paintEmoteBar(); }
       else if (care) moveCare(step); else stepBot(step);
+    }
+    else if (app.view === 'house' && isHolo() && window.House.focusBot) {
+      // 아래 키 = 전체 방 → 캐릭터 하나씩 클로즈업 (오른쪽에 상태 카드)
+      roomFocus(stepIn([null, ...BOT_IDS], window.House.focused(), step));
     }
     else if (app.view === 'house') {
       if (!el('popover').hidden) closePopover();
@@ -780,6 +807,10 @@
       if (isHolo()) runEmote();
       else if (app.sheet === 'care') runCare(); else openSheet('care');
     }
+    else if (app.view === 'house' && isHolo() && window.House.focusBot) {
+      // ✓ = 클로즈업 중이면 집 전체로, 전체면 첫 캐릭터 클로즈업
+      roomFocus(window.House.focused() ? null : BOT_IDS[0]);
+    }
     else if (app.view === 'house') {
       if (!el('popover').hidden) { closePopover(); return; }
       const here = window.House.botsIn && window.House.currentRoom ? window.House.botsIn(window.House.currentRoom()) : [];
@@ -797,6 +828,7 @@
   // 뒤로: 열린 창(설정 창 → 팝오버 → 액정 시트)부터 닫고, 없으면 탭 줄로
   function holoBack() {
     if (!el('settingsModal').hidden) { el('settingsModal').hidden = true; return; }
+    if (app.view === 'house' && window.House.focused && window.House.focused()) { roomFocus(null); return; }
     if (!el('popover').hidden) { closePopover(); return; }
     if (app.sheet && app.view !== 'settings') { closeSheet(); return; }
     if (app.sheet === 'log') { openSheet('menu'); return; }
