@@ -527,31 +527,10 @@ function setupUpdater() {
     pushUpdate({ status: 'downloading', percent, message: `새 버전을 내려받는 중 ${percent}%` });
   });
   autoUpdater.on('update-downloaded', (info) => {
+    // 별도 팝업(윈도우 메시지 박스·알림 풍선) 없이 기기 화면의 '재시작' 버튼으로만 알린다.
+    // 누르지 않아도 앱을 끌 때 자동 설치된다.
     pushUpdate({ status: 'ready', version: info && info.version, percent: 100, message: '새 버전 준비 완료 — 재시작하면 적용돼요' });
-    if (tray && process.platform === 'win32') {
-      tray.displayBalloon?.({
-        title: 'A.I.Mon 새 버전',
-        content: '새 버전 다운로드가 끝났어요. 앱을 재시작하면 적용됩니다.'
-      });
-    }
-    if (win && !win.isDestroyed()) {
-      if (!win.isVisible()) win.show();
-    }
-    const box = {
-      type: 'info',
-      buttons: ['지금 재시작', '나중에'],
-      defaultId: 0,
-      cancelId: 1,
-      title: 'A.I.Mon 새 버전',
-      message: '새 버전 다운로드가 끝났어요.',
-      detail: '지금 재시작하면 바로 적용되고, 나중에 눌러도 앱을 종료할 때 자동으로 설치돼요.'
-    };
-    const shown = (win && !win.isDestroyed())
-      ? dialog.showMessageBox(win, box)
-      : dialog.showMessageBox(box);
-    shown.then((result) => {
-      if (result.response === 0) installUpdateNow();
-    }).catch(() => {});
+    if (win && !win.isDestroyed() && !win.isVisible()) win.show();
   });
   autoUpdater.on('error', (err) => {
     pushUpdate({ status: 'error', message: `업데이트 확인 실패: ${err && err.message ? err.message : '알 수 없는 오류'}` });

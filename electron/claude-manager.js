@@ -61,7 +61,13 @@ function findWindowsTerminal() {
   if (!IS_WIN) return '';
   const localApp = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
   const wt = path.join(localApp, 'Microsoft', 'WindowsApps', 'wt.exe');
-  return fs.existsSync(wt) ? wt : '';
+  // wt.exe는 앱 실행 별칭(reparse point)이라 stat/existsSync가 EACCES로 실패한다 → lstat으로 확인
+  try {
+    fs.lstatSync(wt);
+    return wt;
+  } catch (_) {
+    return '';
+  }
 }
 
 /**
