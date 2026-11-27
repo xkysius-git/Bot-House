@@ -30,6 +30,8 @@ const DEFAULT_MCP_TIMEOUT = '90000';
 const MCP_TIMEOUT = process.env.MCP_TIMEOUT || DEFAULT_MCP_TIMEOUT;
 const WINDOW_POLL_MS = 8000;          // 창 모드에서 채널이 살아 있는지 확인하는 간격
 const WINDOW_START_TIMEOUT_MS = 12000; // 창을 띄운 뒤 이만큼 지나도 채널이 안 보이면 오류로 본다
+// Windows Terminal로 띄울 때 쓰는 실행 배치 파일 이름. 종료할 때 이 이름으로 우리 cmd만 골라 닫는다.
+const LAUNCHER_NAME = 'aimon-claude-channel.cmd';
 
 /** PowerShell 작은따옴표 문자열 리터럴 (안에서는 ' 를 '' 로 쓴다) */
 function psLiteral(value) {
@@ -49,6 +51,81 @@ function windowsConsoleCommand(cmdPath, args) {
     `set "MCP_TIMEOUT=${MCP_TIMEOUT}"`,
     quoted
   ].join(' & ');
+}
+
+/**
+ * Windows Terminal(wt.exe) 경로. 기본 콘솔(conhost)은 오래 켜 두면 0xc0000409로 죽는 일이 있어
+ * (2026-11-23·24·27 이벤트 로그) 설치돼 있으면 Windows Terminal을 쓴다. 없으면 빈 문자열.
+ */
+function findWindowsTerminal() {
+  if (!IS_WIN) return '';
+  const localApp = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
+  const wt = path.join(localApp, 'Microsoft', 'WindowsApps', 'wt.exe');
+  return fs.existsSync(wt) ? wt : '';
+}
+
+/**
+ * Windows Terminal용 실행 배치 파일 내용. wt.exe는 인자 따옴표를 다시 짜기 때문에
+ * 겹따옴표가 들어간 긴 명령 대신 배치 파일 하나를 넘긴다.
+ */
+function launcherScript(cmdPath, args, cwd) {
+  const quoted = [`"${cmdPath}"`, ...args.map((a) => `"${a}"`)].join(' ');
+  return [
+    '@echo off',
+    'chcp 65001>nul',
+    `title ${CONSOLE_TITLE}`,
+    `cd /d "${cwd}"`,
+    `set "MCP_TIMEOUT=${MCP_TIMEOUT}"`,
+    quoted,
+    ''
+  ].join('\r\n');
+}
+
+function writeLauncher(cmdPath, args, cwd) {
+  const file = path.join(os.tmpdir(), LAUNCHER_NAME);
+  fs.writeFileSync(file, launcherScript(cmdPath, args, cwd), 'utf8');
+  return file;
+}
+
+/**
+ * Windows Terminal 새 창(최소화)으로 배치 파일을 실행하는 PowerShell 스크립트.
+ * --suppressApplicationTitle: claude가 탭 제목을 바꾸지 못하게 해서 창 제목을 고정한다.
+ * wt.exe는 띄우고 바로 끝나므로 PID는 받지 않는다 (생존 확인은 --channels 프로세스로 한다).
+ */
+function wtLaunchPlan(wtPath, comspec, launcher) {
+  const argumentLine = `-w new new-tab --title "${CONSOLE_TITLE}" --suppressApplicationTitle "${comspec}" /d /k "${launcher}"`;
+  const script = [
+    "$ErrorActionPreference = 'Stop'",
+    "$ProgressPreference = 'SilentlyContinue'",
+    `Start-Process -FilePath ${psLiteral(wtPath)} -ArgumentList ${psLiteral(argumentLine)} -WindowStyle Minimized`,
+    "Write-Output 'WT=OK'"
+  ].join("\n");
+  return { argumentLine, script };
+}
+
+async function launchWindowsTerminal(wtPath, comspec, cmdPath, args, cwd) {
+  let launcher;
+  try {
+    launcher = writeLauncher(cmdPath, args, cwd);
+  } catch (err) {
+    return { ok: false, pid: null, error: `실행 파일을 만들지 못했어요: ${err.message}` };
+  }
+  const { script } = wtLaunchPlan(wtPath, comspec, launcher);
+  const res = await runPowerShell(script);
+  if (res.ok && /WT=OK/.test(res.stdout || '')) return { ok: true, pid: null, error: '' };
+  return { ok: false, pid: null, error: res.error || 'Windows Terminal을 띄우지 못했어요' };
+}
+
+/** Windows Terminal 탭에서 우리 배치 파일을 돌리는 cmd.exe만 트리째 닫는다 (다른 탭·창은 건드리지 않음). */
+function killLauncherConsoles() {
+  if (!IS_WIN) return;
+  const ps = "Get-CimInstance Win32_Process -Filter \"Name='cmd.exe'\" | " +
+    `Where-Object { $_.CommandLine -like '*${LAUNCHER_NAME}*' } | ` +
+    'ForEach-Object { taskkill /pid $_.ProcessId /T /F | Out-Null }';
+  try {
+    execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps],
+      { windowsHide: true, timeout: 10000 }, () => {});
+  } catch (_) { /* noop */ }
 }
 
 function runPowerShell(script, timeout = 25000) {
@@ -140,6 +217,8 @@ class ClaudeManager extends EventEmitter {
     // 테스트에서 바꿔 끼울 수 있게 메서드로 들고 있는다
     this.listChannels = listChannelProcesses;
     this.launchConsole = launchMinimizedConsole;
+    this.launchTerminal = launchWindowsTerminal;
+    this.findTerminal = findWindowsTerminal;
   }
 
   snapshot() {
@@ -335,8 +414,18 @@ class ClaudeManager extends EventEmitter {
       return;
     }
 
-    const command = windowsConsoleCommand(cmdPath, args);
-    const launched = await this.launchConsole(process.env.ComSpec || 'cmd.exe', command, cwd);
+    const comspec = process.env.ComSpec || 'cmd.exe';
+    let launched = { ok: false, pid: null, error: '' };
+    const wt = this.findTerminal();
+    if (wt) {
+      launched = await this.launchTerminal(wt, comspec, cmdPath, args, cwd);
+      if (launched.ok) this.log('Windows Terminal 창으로 띄웠어요.', 'muted');
+      else this.log(`Windows Terminal로 띄우지 못해 기본 콘솔 창으로 띄워요: ${launched.error}`, 'warn');
+    }
+    if (!launched.ok) {
+      const command = windowsConsoleCommand(cmdPath, args);
+      launched = await this.launchConsole(comspec, command, cwd);
+    }
 
     if (launched.ok) {
       // PID를 못 받아도 창은 떠 있으므로 제목으로 정리할 수 있게 둔다.
@@ -478,14 +567,18 @@ class ClaudeManager extends EventEmitter {
     try { process.kill(pid, 'SIGTERM'); } catch (_) { /* noop */ }
   }
 
-  // PID를 못 받았을 때를 위한 안전망: 우리 창 제목(옛 제목 포함)을 가진 콘솔을 트리째 닫는다
+  // PID를 못 받았을 때를 위한 안전망: 우리 창 제목(옛 제목 포함)을 가진 콘솔을 트리째 닫는다.
+  // Windows Terminal은 창 여러 개가 한 프로세스라 제목으로 죽이면 다른 창까지 닫히므로 빼고,
+  // 그쪽은 배치 파일 이름으로 우리 cmd만 닫는다.
   killConsoleWindows() {
     if (!IS_WIN) return;
     for (const title of [CONSOLE_TITLE, ...LEGACY_CONSOLE_TITLES]) {
       try {
-        execFile('taskkill', ['/FI', `WINDOWTITLE eq ${title}`, '/T', '/F'], { windowsHide: true }, () => {});
+        execFile('taskkill', ['/FI', `WINDOWTITLE eq ${title}`, '/FI', 'IMAGENAME ne WindowsTerminal.exe',
+          '/T', '/F'], { windowsHide: true }, () => {});
       } catch (_) { /* noop */ }
     }
+    killLauncherConsoles();
   }
 
   // 남아 있는 콘솔 창을 닫고 창 모드 상태를 비운다
@@ -639,4 +732,7 @@ class ClaudeManager extends EventEmitter {
   }
 }
 
-module.exports = { ClaudeManager, windowsConsoleCommand, consoleLaunchPlan, launchMinimizedConsole };
+module.exports = {
+  ClaudeManager, windowsConsoleCommand, consoleLaunchPlan, launchMinimizedConsole,
+  launcherScript, wtLaunchPlan, findWindowsTerminal, LAUNCHER_NAME
+};

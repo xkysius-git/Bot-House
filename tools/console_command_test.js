@@ -38,4 +38,22 @@ const out = execFileSync(process.execPath, ['-e',
 assert.match(out, /set "MCP_TIMEOUT=120000"/, `환경변수 우선 적용 실패: ${out}`);
 console.log('· MCP_TIMEOUT 환경변수 우선 적용 OK');
 
+// 5) Windows Terminal: 배치 파일에 MCP_TIMEOUT·폴더·실행이 순서대로 들어가야 한다
+const { launcherScript, wtLaunchPlan, LAUNCHER_NAME } = require('../electron/claude-manager');
+const bat = launcherScript(cmd, args, 'C:\\claude-telegram');
+const lines = bat.split('\r\n');
+assert.ok(lines.includes('cd /d "C:\\claude-telegram"'), `작업 폴더 이동이 없음: ${bat}`);
+assert.ok(lines.indexOf('set "MCP_TIMEOUT=90000"') < lines.indexOf(`"${cmd}" "--channels" "${args[1]}"`),
+  'MCP_TIMEOUT은 claude 실행보다 먼저 설정되어야 함');
+console.log('· launcherScript: 배치 파일 OK');
+
+// 6) wt.exe 실행 계획: 새 창·고정 제목·최소화, 배치 파일을 cmd /k로 넘긴다
+const launcher = `C:\\Temp\\${LAUNCHER_NAME}`;
+const wtPlan = wtLaunchPlan('C:\\wt.exe', 'C:\\Windows\\System32\\cmd.exe', launcher);
+assert.ok(wtPlan.argumentLine.startsWith('-w new new-tab --title "A.I.Mon Claude Channel" --suppressApplicationTitle'),
+  `wt 인자: ${wtPlan.argumentLine}`);
+assert.ok(wtPlan.argumentLine.endsWith(`/d /k "${launcher}"`), `배치 파일 전달: ${wtPlan.argumentLine}`);
+assert.ok(wtPlan.script.includes('-WindowStyle Minimized'), 'wt 최소화 실행이 아님');
+console.log('· wtLaunchPlan: Windows Terminal 실행 계획 OK');
+
 console.log('\n콘솔 명령 점검 통과');
