@@ -152,301 +152,465 @@
     g.fillRect(x, y, w, h);
   }
 
-  /* ------------------------------------------------------------ 방 그림 (탑뷰) */
-  // 장현님 11-27: "너무 평면적" → 위에서 내려다보는 실내. 뒷벽은 위쪽 띠, 바닥이 넓게 보이고
-  // 가구는 윗면 + 앞면(높이) + 그림자 + 진한 외곽선. 캐릭터 자리(SPOTS·LIVING_BOX)·램프·모니터 좌표는 그대로.
-  const TOP_WALL = 56;       // 뒷벽 면이 끝나는 높이 (여기부터 바닥)
-  const DOOR = { y0: 198, y1: 254 };   // 방 사이 문 (LANE 230 지나감)
+  /* ------------------------------------------------------------ 방 그림 (탑뷰, 1px 붓) */
+  // 장현님 11-27: 네모로 찍지 말고 1px을 붓처럼. 모든 물건을 픽셀 단위로 그린다:
+  // 둥근 모서리, 외곽선은 재질의 진한 색, 위·왼쪽 하이라이트, 아래·오른쪽 그늘, 질감(나뭇결·주름·잔무늬), 부드러운 그림자.
+  // 캐릭터 자리(SPOTS·LIVING_BOX), 스탠드 빛(137,74), 모니터 화면(y 131~148) 좌표는 그대로.
+  const TOP_WALL = 56;
+  const DOOR = { y0: 198, y1: 254 };
 
-  const TV = {
-    night: {
-      out: '#07050f', shadow: 'rgba(0,0,0,.35)', cap: '#141026', capHi: '#2a2448',
-      wall: { bed: ['#24204a', '#2b2655', '#1b1838'], living: ['#33223f', '#3b2949', '#271a31'], work: ['#18293f', '#1e324b', '#122033'] },
-      base: '#120e22',
-      wood: ['#4f3756', '#5c4163', '#432e49', '#38273d'],
-      tile: ['#22314a', '#283a56', '#1b2840'],
-      rug: ['#43305e', '#523b70', '#352650', '#c0a060'],
-      sky: '#0d1430', sky2: '#16204a', frame: '#4a3f72', moon: '#fff3c4',
-      bedWood: ['#6b4a5c', '#573c4b', '#3f2b37'], sheet: ['#4a5aa0', '#3d4a88', '#2e3970', '#6576bd'], pillow: ['#b9c2ee', '#8e98cc'],
-      sofa: ['#7a4466', '#663856', '#4f2b43', '#8c5277'],
-      deskTop: ['#4a3f5c', '#574a6c'], deskFront: '#352c45', metal: ['#3d3a52', '#2b293c', '#575473'],
-      mon: '#0c0a16', monEdge: '#4d4466',
-      leaf: ['#2f7a5a', '#3c946d', '#225a43'], pot: ['#7a5242', '#5e3e33'],
-      book: ['#7a4bd0', '#d06a4b', '#4bb0d0', '#d0b04b', '#5ac08a'],
-      lampShade: '#ffd98a', lampBase: '#5c4a3a', paper: '#cfd6f0', mug: '#d06a4b', led: '#7ff6ff'
-    },
-    day: {
-      out: '#3a2a20', shadow: 'rgba(60,35,20,.22)', cap: '#8a6c58', capHi: '#b39780',
-      wall: { bed: ['#dfe6f5', '#e9eefa', '#c9d2e8'], living: ['#f4e4cf', '#f9eddc', '#e3cfb5'], work: ['#dcefea', '#e8f6f2', '#c4ddd6'] },
-      base: '#9a7458',
-      wood: ['#c99a6b', '#d4a777', '#b98a5d', '#a77a50'],
-      tile: ['#e6ece9', '#f2f5f3', '#cdd6d2'],
-      rug: ['#e8c48a', '#f0d29e', '#d9ad6c', '#c0603e'],
-      sky: '#9fd6ff', sky2: '#cdeaff', frame: '#ffffff', moon: '#fff2a0',
-      bedWood: ['#a5764f', '#8c623f', '#6e4b30'], sheet: ['#7a92e6', '#6a82d6', '#5a6fc0', '#98acf0'], pillow: ['#ffffff', '#dfe4f5'],
-      sofa: ['#e07a5f', '#c9664d', '#a9523d', '#ec9178'],
-      deskTop: ['#c49a74', '#d3ab86'], deskFront: '#a17a58', metal: ['#8c8aa0', '#706e86', '#b0aec4'],
-      mon: '#1d1a28', monEdge: '#57506a',
-      leaf: ['#4fae6a', '#66c07e', '#3a8c52'], pot: ['#c07a50', '#a0623e'],
-      book: ['#7a4bd0', '#e0664b', '#3fa0c8', '#e0b23f', '#4fae6a'],
-      lampShade: '#fff1c2', lampBase: '#8a6a4a', paper: '#ffffff', mug: '#e0664b', led: '#3fa0c8'
-    }
-  };
-
-  // 같은 좌표면 늘 같은 값 (질감용 잡음)
   function hash(x, y) {
     let h = (x * 374761393 + y * 668265263) | 0;
     h = (h ^ (h >>> 13)) * 1274126177;
     return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
   }
 
-  // 위에서 본 물건: 윗면(w×d) + 앞면(높이 h) + 아래 그림자 + 외곽선
-  function box(g, t, x, y, w, d, h, top, front, hi) {
-    px(g, x + 1, y + d + h, w, 3, t.shadow);
-    px(g, x - 1, y - 1, w + 2, d + h + 2, t.out);
-    px(g, x, y, w, d, top);
-    if (hi) px(g, x, y, w, 1, hi);
-    if (h > 0) {
-      px(g, x, y + d, w, h, front);
-      px(g, x, y + d, w, 1, t.out);
-    }
+  function hex(c) { return [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)]; }
+  // amt > 0 밝게, < 0 어둡게 (어두울 때는 살짝 보랏빛 쪽으로)
+  function shade(c, amt) {
+    const [r, g, b] = hex(c);
+    const t = amt > 0 ? [255, 250, 235] : [20, 10, 40];
+    const k = Math.abs(amt);
+    const m = (a, z) => Math.round(a + (z - a) * k).toString(16).padStart(2, '0');
+    return `#${m(r, t[0])}${m(g, t[1])}${m(b, t[2])}`;
+  }
+  // 재질 한 가지 → 외곽선·하이라이트·바탕·중간·그늘 5단
+  function mat(c) {
+    return { out: shade(c, -0.62), hi: shade(c, 0.22), base: c, mid: shade(c, -0.12), dark: shade(c, -0.28) };
   }
 
-  // 면에 잔무늬(디더) 찍기: 넓은 단색 면이 클로즈업에서 비어 보이지 않게
-  function dither(g, x, y, w, h, c, rate) {
-    for (let yy = y; yy < y + h; yy += 2) {
-      for (let xx = x + (yy % 4 ? 1 : 0); xx < x + w; xx += 2) if (hash(xx, yy) < rate) px(g, xx, yy, 1, 1, c);
-    }
+  function dot(g, x, y, c) { g.fillStyle = c; g.fillRect(x, y, 1, 1); }
+
+  function inRound(i, j, w, h, r) {
+    if (i < 0 || j < 0 || i >= w || j >= h) return false;
+    if (r <= 0) return true;
+    const dx = i < r ? r - i - 0.5 : i >= w - r ? i - (w - r) + 0.5 : 0;
+    const dy = j < r ? r - j - 0.5 : j >= h - r ? j - (h - r) + 0.5 : 0;
+    return dx * dx + dy * dy <= r * r;
   }
 
-  function woodFloor(g, t, x0, y0, w, h) {
-    for (let y = y0, row = 0; y < y0 + h; y += 8, row += 1) {
-      const off = (row * 37) % 48;
-      for (let x = x0 - off; x < x0 + w; x += 48) {
-        const bx = Math.max(x0, x);
-        const bw = Math.min(x0 + w, x + 48) - bx;
-        const c = t.wood[Math.floor(hash(x, row) * 3)];
-        px(g, bx, y, bw, 8, c);
-        px(g, bx, y + 7, bw, 1, t.wood[3]);
-        if (x >= x0) px(g, x, y, 1, 7, t.wood[3]);
-        // 나뭇결
-        const gx = bx + 6 + Math.floor(hash(row, x) * Math.max(1, bw - 18));
-        if (bw > 20) px(g, gx, y + 3, 10, 1, t.wood[2]);
+  // 둥근 덩어리 하나를 1px씩: 외곽선 → 위·왼쪽 빛 → 아래·오른쪽 그늘 → 바탕(+질감)
+  function blob(g, x, y, w, h, r, P, tex) {
+    for (let j = 0; j < h; j += 1) {
+      for (let i = 0; i < w; i += 1) {
+        if (!inRound(i, j, w, h, r)) continue;
+        const ins = (a, b) => inRound(a, b, w, h, r);
+        let c;
+        if (P.out && (!ins(i - 1, j) || !ins(i + 1, j) || !ins(i, j - 1) || !ins(i, j + 1))) c = P.out;
+        else if (!ins(i, j - 2) || !ins(i - 2, j)) c = P.hi;
+        else if (!ins(i, j + 2) || !ins(i, j + 3)) c = P.dark;
+        else if (!ins(i + 2, j)) c = P.mid;
+        else c = P.base;
+        if (tex && (c === P.base || c === P.mid)) c = tex(i, j, c) || c;
+        dot(g, x + i, y + j, c);
       }
     }
   }
 
-  function tileFloor(g, t, x0, y0, w, h) {
-    for (let y = y0; y < y0 + h; y += 16) {
-      for (let x = x0; x < x0 + w; x += 16) {
-        const c = ((x - x0) / 16 + (y - y0) / 16) % 2 ? t.tile[0] : t.tile[1];
-        px(g, x, y, Math.min(16, x0 + w - x), Math.min(16, y0 + h - y), c);
-        px(g, x, y, Math.min(16, x0 + w - x), 1, t.tile[2]);
-        px(g, x, y, 1, Math.min(16, y0 + h - y), t.tile[2]);
+  // 물건 = 앞면(높이) 위에 윗면. 아래엔 부드러운 그림자
+  function solid(g, x, y, w, d, h, r, Ptop, Pfront, tex) {
+    softShadow(g, x + 1, y + d + h - 2, w, 6);
+    if (h > 0) blob(g, x, y + d - r - 1, w, h + r + 1, r, Pfront);
+    blob(g, x, y, w, d, r, Ptop, tex);
+  }
+
+  function softShadow(g, x, y, w, h) {
+    const cx = x + w / 2, cy = y + h / 2;
+    for (let j = 0; j < h; j += 1) {
+      for (let i = 0; i < w; i += 1) {
+        const dx = (x + i + 0.5 - cx) / (w / 2), dy = (y + j + 0.5 - cy) / (h / 2);
+        const d = dx * dx + dy * dy;
+        if (d > 1) continue;
+        if (d > 0.6 && (i + j) % 2) continue; // 가장자리는 체크무늬로 흐리게
+        g.fillStyle = 'rgba(8,4,20,.28)';
+        g.fillRect(x + i, y + j, 1, 1);
       }
     }
   }
 
-  function rug(g, t, x, y, w, h) {
-    px(g, x - 1, y - 1, w + 2, h + 2, t.out);
-    px(g, x, y, w, h, t.rug[2]);
-    px(g, x + 3, y + 3, w - 6, h - 6, t.rug[0]);
-    px(g, x + 6, y + 6, w - 12, h - 12, t.rug[1]);
-    dither(g, x + 6, y + 6, w - 12, h - 12, t.rug[0], 0.18);
-    // 무늬: 가장자리 점선 + 가운데 마름모
-    for (let i = x + 8; i < x + w - 8; i += 6) { px(g, i, y + 4, 2, 1, t.rug[3]); px(g, i, y + h - 5, 2, 1, t.rug[3]); }
-    const cx = x + Math.floor(w / 2);
-    const cy = y + Math.floor(h / 2);
-    for (let k = 0; k < 6; k += 1) {
-      px(g, cx - k, cy - 6 + k, 1, 1, t.rug[3]); px(g, cx + k, cy - 6 + k, 1, 1, t.rug[3]);
-      px(g, cx - k, cy + 6 - k, 1, 1, t.rug[3]); px(g, cx + k, cy + 6 - k, 1, 1, t.rug[3]);
+  function circle(g, cx, cy, rad, P) { blob(g, cx - rad, cy - rad, rad * 2, rad * 2, rad, P); }
+
+  /* ---------- 재질 색 */
+  const TC = {
+    night: {
+      wall: { bed: '#2b2756', living: '#3c2a4a', work: '#1f3450' }, cap: '#1a1530',
+      wood: '#56395c', tile: '#263751', grout: '#141d2e',
+      bedFrame: '#6e4b60', sheet: '#4b5ba6', pillow: '#c0c8f0', sofa: '#7e4669', cushion: '#a05c7e',
+      rug: '#46315f', rugAccent: '#d0a860', rug2: '#2f4a6a',
+      table: '#6a4b52', desk: '#4c415e', metal: '#43405a', frame: '#5a4e84',
+      leaf: '#3a8a63', pot: '#8a5a46', sky: '#101a3c', sky2: '#1b2756', star: '#fff6d0',
+      shade: '#ffd98a', paper: '#d6dcf4', mug: '#d06a4b', led: '#7ff6ff', mon: '#0c0a16', curtain: '#6a3456',
+      book: ['#8a5ad8', '#d6704f', '#4fb6d6', '#d6b64f', '#5ac08a', '#c85a8a']
+    },
+    day: {
+      wall: { bed: '#dde5f6', living: '#f4e2cb', work: '#d8eee8' }, cap: '#8a6c58',
+      wood: '#c99a6b', tile: '#e4ebe8', grout: '#b9c4bf',
+      bedFrame: '#a5764f', sheet: '#7a92e6', pillow: '#ffffff', sofa: '#e07a5f', cushion: '#f0a080',
+      rug: '#e8c48a', rugAccent: '#b8583c', rug2: '#9ec8e0',
+      table: '#b07c52', desk: '#c49a74', metal: '#9a98b0', frame: '#ffffff',
+      leaf: '#4fae6a', pot: '#c07a50', sky: '#8fcffc', sky2: '#c6e8ff', star: '#fff2a0',
+      shade: '#fff1c2', paper: '#ffffff', mug: '#e0664b', led: '#3fa0c8', mon: '#1d1a28', curtain: '#d98a6c',
+      book: ['#7a4bd0', '#e0664b', '#3fa0c8', '#e0b23f', '#4fae6a', '#d0508a']
     }
-    // 술 장식
-    for (let i = x + 2; i < x + w - 2; i += 4) { px(g, i, y - 3, 1, 2, t.rug[2]); px(g, i, y + h + 1, 1, 2, t.rug[2]); }
+  };
+
+  /* ---------- 바닥 */
+  function woodFloor(g, C, x0, y0, w, h) {
+    const P = mat(C.wood);
+    for (let j = 0; j < h; j += 1) {
+      const row = Math.floor(j / 8);
+      const jy = j % 8;
+      const off = Math.floor(hash(row, 7) * 48);
+      for (let i = 0; i < w; i += 1) {
+        const seg = Math.floor((i + off) / 52);
+        const ix = (i + off) % 52;
+        const plankTint = (hash(seg, row) - 0.5) * 0.12;
+        let c = shade(P.base, plankTint);
+        if (jy === 7) c = P.out;                                    // 판자 사이 틈
+        else if (ix === 0) c = P.dark;                              // 판자 끝
+        else if (jy === 0) c = shade(c, 0.1);                       // 판자 윗모서리 빛
+        else {
+          const gy = Math.round(3.2 + Math.sin((i + seg * 13) / 6.5) * 1.6);   // 물결 나뭇결
+          if (jy === gy && hash(i, row) > 0.35) c = shade(c, -0.14);
+          const kx = Math.floor(hash(seg, row * 3) * 40) + 6;      // 옹이
+          if (hash(row, seg) > 0.8 && Math.abs(ix - kx) <= 1 && jy >= 3 && jy <= 4) c = P.dark;
+        }
+        // 벽 가까이는 어둡게 (모서리 그늘)
+        const ao = Math.max(0, 7 - j) / 7 * 0.35 + Math.max(0, 4 - i) / 4 * 0.2 + Math.max(0, 4 - (w - 1 - i)) / 4 * 0.2;
+        if (ao > 0) c = shade(c, -ao);
+        dot(g, x0 + i, y0 + j, c);
+      }
+    }
   }
 
-  function plant(g, t, x, y) {
-    box(g, t, x + 3, y + 14, 12, 6, 6, t.pot[0], t.pot[1]);
-    px(g, x - 1, y - 1, 20, 17, t.out);
-    px(g, x, y, 18, 15, t.leaf[2]);
-    [[2, 2, 7, 6], [9, 1, 7, 6], [4, 7, 10, 6], [1, 8, 5, 5], [12, 8, 5, 5]].forEach(([a, b, c, d]) => px(g, x + a, y + b, c, d, t.leaf[0]));
-    [[4, 3], [11, 2], [7, 8], [13, 10]].forEach(([a, b]) => px(g, x + a, y + b, 2, 1, t.leaf[1]));
+  function tileFloor(g, C, x0, y0, w, h) {
+    const P = mat(C.tile);
+    for (let j = 0; j < h; j += 1) {
+      for (let i = 0; i < w; i += 1) {
+        const ti = i % 16, tj = j % 16;
+        const alt = (Math.floor(i / 16) + Math.floor(j / 16)) % 2;
+        let c = alt ? P.base : shade(P.base, -0.06);
+        if (ti === 0 || tj === 0) c = C.grout;
+        else if (ti === 1 || tj === 1) c = shade(c, 0.12);
+        else if (ti === 15 || tj === 15) c = shade(c, -0.12);
+        else if (hash(i, j) > 0.93) c = shade(c, -0.05);
+        const ao = Math.max(0, 7 - j) / 7 * 0.35;
+        if (ao > 0) c = shade(c, -ao);
+        dot(g, x0 + i, y0 + j, c);
+      }
+    }
   }
 
-  function backWall(g, t, room, x0) {
-    const [c, c2, c3] = t.wall[room];
-    px(g, x0, 0, ROOM_W, TOP_WALL, c);
-    for (let x = x0 + 4; x < x0 + ROOM_W; x += 10) px(g, x, 6, 1, TOP_WALL - 14, c2);
-    px(g, x0, TOP_WALL - 10, ROOM_W, 1, c3);
-    px(g, x0, TOP_WALL - 9, ROOM_W, 5, c2);
-    px(g, x0, TOP_WALL - 4, ROOM_W, 4, t.base);
-    px(g, x0, 0, ROOM_W, 5, t.cap);
-    px(g, x0, 4, ROOM_W, 1, t.out);
+  /* ---------- 벽 */
+  function backWall(g, C, room, x0) {
+    const P = mat(C.wall[room]);
+    for (let j = 0; j < TOP_WALL; j += 1) {
+      for (let i = 0; i < ROOM_W; i += 1) {
+        let c;
+        if (j < 4) c = C.cap;
+        else if (j === 4) c = shade(C.cap, -0.5);
+        else if (j < TOP_WALL - 16) {
+          // 벽지: 은은한 세로줄 + 작은 꽃무늬
+          c = (i % 12 === 0) ? P.mid : P.base;
+          const mi = (i + (Math.floor(j / 10) % 2) * 6) % 12, mj = j % 10;
+          if ((mi === 6 && (mj === 4 || mj === 6)) || (mj === 5 && (mi === 5 || mi === 7))) c = P.hi;
+          if (j === 5) c = P.dark;
+        } else if (j < TOP_WALL - 5) {
+          // 징두리 판벽
+          const pi = i % 10;
+          c = pi === 0 ? P.dark : pi === 1 ? shade(P.base, 0.08) : shade(P.base, -0.08);
+          if (j === TOP_WALL - 16) c = P.hi;
+          if (j === TOP_WALL - 15) c = P.dark;
+        } else {
+          // 걸레받이
+          c = j === TOP_WALL - 5 ? shade(C.cap, 0.3) : j === TOP_WALL - 1 ? shade(C.cap, -0.5) : C.cap;
+        }
+        dot(g, x0 + i, j, c);
+      }
+    }
   }
 
-  function windowTop(g, t, x, y, w, h, theme) {
-    px(g, x - 3, y - 3, w + 6, h + 6, t.out);
-    px(g, x - 2, y - 2, w + 4, h + 4, t.frame);
-    px(g, x, y, w, h, t.sky);
-    px(g, x, y + Math.floor(h * 0.55), w, Math.ceil(h * 0.45), t.sky2);
+  function windowTop(g, C, x, y, w, h, theme) {
+    const F = mat(C.frame);
+    blob(g, x - 3, y - 3, w + 6, h + 6, 2, F);
+    for (let j = 0; j < h; j += 1) {
+      const k = j / h;
+      for (let i = 0; i < w; i += 1) {
+        let c = k < 0.55 ? C.sky : C.sky2;
+        if (k >= 0.5 && k < 0.6 && (i + j) % 2) c = C.sky2;     // 하늘 경계 디더
+        if ((i + j) % 11 === 0 && i - j > 2 && i - j < w - 8) c = shade(c, 0.18); // 유리 반사 사선
+        dot(g, x + i, y + j, c);
+      }
+    }
     if (theme === 'night') {
-      px(g, x + w - 10, y + 4, 5, 5, t.moon);
-      px(g, x + w - 9, y + 4, 4, 3, t.sky);
-      [[3, 5], [9, 12], [15, 3]].forEach(([a, b]) => { if (a < w - 12) px(g, x + a, y + b, 1, 1, '#ffffff'); });
+      circle(g, x + w - 8, y + 6, 3, { out: null, hi: C.star, base: C.star, mid: C.star, dark: shade(C.star, -0.15) });
+      dot(g, x + w - 9, y + 5, C.sky); dot(g, x + w - 8, y + 5, C.sky); dot(g, x + w - 9, y + 6, C.sky);
+      [[3, 4], [8, 10], [14, 3], [5, 15]].forEach(([a, b]) => { if (a < w - 12) dot(g, x + a, y + b, '#ffffff'); });
     } else {
-      px(g, x + w - 11, y + 4, 6, 6, t.moon);
-      px(g, x + 3, y + h - 7, 10, 2, '#ffffff');
+      circle(g, x + w - 8, y + 6, 3, { out: null, hi: '#ffffff', base: C.star, mid: C.star, dark: shade(C.star, -0.1) });
+      [[3, h - 7], [4, h - 8], [5, h - 8], [6, h - 7], [7, h - 7], [2, h - 7]].forEach(([a, b]) => dot(g, x + a, y + b, '#ffffff'));
     }
-    px(g, x + Math.floor(w / 2) - 1, y, 2, h, t.frame);
-    px(g, x - 4, y + h + 2, w + 8, 2, t.frame);
+    for (let j = 0; j < h; j += 1) { dot(g, x + Math.floor(w / 2) - 1, y + j, F.base); dot(g, x + Math.floor(w / 2), y + j, F.mid); }
+    blob(g, x - 5, y + h + 1, w + 10, 4, 1, F);
   }
 
-  function drawBedroomTop(g, t, theme) {
-    const x0 = ROOM_X.bed;
-    woodFloor(g, t, x0, TOP_WALL, ROOM_W, LH - TOP_WALL);
-    backWall(g, t, 'bed', x0);
-    windowTop(g, t, x0 + 20, 12, 36, 24, theme);
-    // 벽시계
-    px(g, x0 + 99, 13, 16, 16, t.out);
-    px(g, x0 + 100, 14, 14, 14, t.frame);
-    px(g, x0 + 102, 16, 10, 10, theme === 'night' ? '#2b2650' : '#ffffff');
-    px(g, x0 + 106, 17, 2, 5, t.out); px(g, x0 + 106, 21, 4, 1, t.out);
-    // 서랍장 (왼쪽 위)
-    box(g, t, x0 + 6, TOP_WALL + 4, 30, 12, 12, t.bedWood[0], t.bedWood[1], t.bedWood[0]);
-    px(g, x0 + 10, TOP_WALL + 19, 8, 1, t.bedWood[2]); px(g, x0 + 24, TOP_WALL + 19, 8, 1, t.bedWood[2]);
-    px(g, x0 + 12, TOP_WALL + 6, 6, 4, t.book[1]); px(g, x0 + 24, TOP_WALL + 5, 5, 5, t.paper);
-    // 협탁 + 스탠드 (램프 빛 중심 137,74)
-    box(g, t, x0 + 126, 64, 22, 12, 8, t.bedWood[0], t.bedWood[1]);
-    px(g, x0 + 131, 62, 12, 10, t.out);
-    px(g, x0 + 132, 63, 10, 8, t.lampShade);
-    px(g, x0 + 132, 63, 10, 2, '#ffffff');
-    // 큰 침대 (4명): 머리판 → 베개 → 이불 → 앞면
-    const bx = x0 + 6, bw = 148;
-    box(g, t, bx, 96, bw, 8, 6, t.bedWood[0], t.bedWood[1], t.bedWood[0]);
-    px(g, bx - 1, 109, bw + 2, 96, t.out);
-    px(g, bx, 110, bw, 86, t.pillow[1]);
-    [16, 50, 86, 120].forEach((p) => {
-      px(g, x0 + p - 1, 113, 26, 13, t.out);
-      px(g, x0 + p, 114, 24, 11, t.pillow[0]);
-      px(g, x0 + p, 122, 24, 3, t.pillow[1]);
-    });
-    px(g, bx, 134, bw, 62, t.sheet[0]);
-    px(g, bx, 134, bw, 5, t.sheet[3]);
-    px(g, bx, 139, bw, 1, t.sheet[2]);
-    dither(g, bx, 140, bw, 50, t.sheet[1], 0.12);
-    for (let x = bx + 37; x < bx + bw; x += 37) px(g, x, 140, 1, 50, t.sheet[2]);
-    for (let y = 152; y < 190; y += 13) px(g, bx, y, bw, 1, t.sheet[2]);
-    px(g, bx, 190, bw, 6, t.sheet[1]);
-    px(g, bx, 196, bw, 8, t.bedWood[1]);
-    px(g, bx, 196, bw, 1, t.out);
-    px(g, bx + 1, 205, bw, 3, t.shadow);
-    // 러그 + 슬리퍼
-    rug(g, t, x0 + 36, 216, 88, 32);
-    px(g, x0 + 50, 230, 6, 4, t.sheet[3]); px(g, x0 + 58, 231, 6, 4, t.sheet[3]);
-    plant(g, t, x0 + 8, 226);
-  }
-
-  function drawLivingTop(g, t, theme) {
-    const x0 = ROOM_X.living;
-    woodFloor(g, t, x0, TOP_WALL, ROOM_W, LH - TOP_WALL);
-    backWall(g, t, 'living', x0);
-    windowTop(g, t, x0 + 60, 10, 40, 28, theme);
-    px(g, x0 + 52, 8, 7, 38, t.sofa[2]); px(g, x0 + 101, 8, 7, 38, t.sofa[2]);
-    px(g, x0 + 50, 6, 60, 3, t.bedWood[2]);
-    // 액자
-    px(g, x0 + 15, 15, 24, 18, t.out);
-    px(g, x0 + 16, 16, 22, 16, t.frame);
-    px(g, x0 + 18, 18, 18, 7, t.sky2);
-    px(g, x0 + 18, 25, 18, 5, t.leaf[0]);
-    // 큰 러그
-    rug(g, t, x0 + 14, 112, 132, 134);
-    // 소파 (뒷벽에 붙여 아래를 봄): 등받이 → 방석 → 팔걸이 → 앞면
-    const sx = x0 + 22, sw = 116;
-    box(g, t, sx, TOP_WALL + 2, sw, 10, 8, t.sofa[0], t.sofa[1], t.sofa[3]);
-    px(g, sx - 1, TOP_WALL + 19, sw + 2, 22, t.out);
-    px(g, sx, TOP_WALL + 20, sw, 14, t.sofa[0]);
-    px(g, sx + Math.floor(sw / 3), TOP_WALL + 20, 1, 14, t.sofa[2]);
-    px(g, sx + Math.floor(sw * 2 / 3), TOP_WALL + 20, 1, 14, t.sofa[2]);
-    dither(g, sx, TOP_WALL + 20, sw, 14, t.sofa[1], 0.15);
-    px(g, sx, TOP_WALL + 34, sw, 6, t.sofa[1]);
-    px(g, sx + 1, TOP_WALL + 41, sw, 3, t.shadow);
-    box(g, t, sx - 8, TOP_WALL + 6, 8, 28, 6, t.sofa[1], t.sofa[2], t.sofa[0]);
-    box(g, t, sx + sw, TOP_WALL + 6, 8, 28, 6, t.sofa[1], t.sofa[2], t.sofa[0]);
-    // 쿠션
-    px(g, sx + 8, TOP_WALL + 21, 14, 9, t.out); px(g, sx + 9, TOP_WALL + 22, 12, 7, t.rug[3]);
-    px(g, sx + sw - 22, TOP_WALL + 21, 14, 9, t.out); px(g, sx + sw - 21, TOP_WALL + 22, 12, 7, t.pillow[0]);
-    // 커피 테이블 + 머그·책
-    box(g, t, x0 + 52, 136, 56, 20, 6, t.bedWood[0], t.bedWood[1], t.bedWood[0]);
-    px(g, x0 + 60, 140, 12, 9, t.out); px(g, x0 + 61, 141, 10, 7, t.book[2]); px(g, x0 + 61, 141, 10, 1, t.paper);
-    px(g, x0 + 92, 141, 7, 7, t.out); px(g, x0 + 93, 142, 5, 5, t.mug); px(g, x0 + 94, 143, 3, 2, '#3a2a20');
-    // 화분 + 플로어 스탠드
-    plant(g, t, x0 + 140, TOP_WALL + 6);
-    plant(g, t, x0 + 10, 222);
-    px(g, x0 + 144, 225, 10, 10, t.out); px(g, x0 + 145, 226, 8, 8, t.lampShade); px(g, x0 + 145, 226, 8, 2, '#ffffff');
-    px(g, x0 + 148, 235, 2, 8, t.lampBase); px(g, x0 + 145, 243, 8, 2, t.lampBase);
-  }
-
-  function drawWorkTop(g, t, theme) {
-    const x0 = ROOM_X.work;
-    tileFloor(g, t, x0, TOP_WALL, ROOM_W, LH - TOP_WALL);
-    backWall(g, t, 'work', x0);
-    // 책장 (뒷벽)
-    px(g, x0 + 11, 7, 62, 42, t.out);
-    px(g, x0 + 12, 8, 60, 40, t.bedWood[1]);
-    [10, 24, 38].forEach((sy) => {
-      px(g, x0 + 14, sy, 56, 12, t.bedWood[2]);
-      for (let i = 0; i < 9; i += 1) {
-        const h = 9 + Math.floor(hash(i, sy) * 3);
-        px(g, x0 + 15 + i * 6, sy + 12 - h, 5, h, t.book[(i + sy) % 5]);
+  function curtain(g, C, x, y, w, h) {
+    const P = mat(C.curtain);
+    for (let j = 0; j < h; j += 1) {
+      for (let i = 0; i < w; i += 1) {
+        // 세로 주름: 사인으로 밝고 어둡게, 아래로 갈수록 살짝 퍼짐
+        const s = Math.sin((i + 1) * 1.6 + j * 0.02);
+        let c = s > 0.5 ? P.hi : s > -0.2 ? P.base : s > -0.7 ? P.mid : P.dark;
+        if (i === 0 || i === w - 1) c = P.out;
+        if (j === h - 1 && (i % 2)) continue;
+        dot(g, x + i, y + j, c);
       }
-      px(g, x0 + 12, sy + 12, 60, 2, t.bedWood[0]);
+    }
+  }
+
+  function plant(g, C, x, y) {
+    const L = mat(C.leaf), Pt = mat(C.pot);
+    softShadow(g, x + 2, y + 20, 16, 5);
+    blob(g, x + 4, y + 13, 12, 9, 3, Pt);
+    blob(g, x + 3, y + 12, 14, 4, 2, { ...Pt, base: Pt.hi, mid: Pt.base });
+    // 잎: 기울어진 타원 여러 장
+    const leaves = [[2, 2, 7, 5], [9, 0, 7, 6], [5, 5, 9, 6], [0, 7, 6, 5], [12, 6, 6, 5], [7, -2, 5, 5]];
+    leaves.forEach(([a, b, lw, lh]) => blob(g, x + a, y + b, lw, lh, Math.floor(Math.min(lw, lh) / 2), L));
+    [[5, 4], [12, 2], [9, 8], [3, 9], [14, 8], [9, 0]].forEach(([a, b]) => dot(g, x + a, y + b, shade(L.hi, 0.15)));
+  }
+
+  function rug(g, C, x, y, w, h, accent2) {
+    const R = mat(C.rug);
+    blob(g, x, y, w, h, 3, R, (i, j, c) => {
+      const b = Math.min(i, j, w - 1 - i, h - 1 - j);
+      if (b === 3) return R.dark;                                       // 테두리 줄
+      if (b === 5 && (i + j) % 4 === 0) return C.rugAccent;            // 점선 장식
+      if (b > 7) {
+        // 가운데: 반복 마름모 무늬 + 잔결
+        const mi = (i - 8) % 18, mj = (j - 8) % 18;
+        if (Math.abs(mi - 9) + Math.abs(mj - 9) === 6) return accent2 ? C.rug2 : C.rugAccent;
+        if (Math.abs(mi - 9) + Math.abs(mj - 9) === 2) return R.hi;
+        if (hash(i, j) > 0.86) return R.mid;
+      }
+      return null;
+    });
+    for (let i = 3; i < w - 3; i += 3) { dot(g, x + i, y - 1, R.mid); dot(g, x + i, y - 2, R.dark); dot(g, x + i, y + h, R.mid); dot(g, x + i, y + h + 1, R.dark); }
+  }
+
+  function lampTop(g, C, cx, cy) {
+    const S = mat(C.shade);
+    circle(g, cx, cy, 5, { ...S, out: shade(C.shade, -0.45) });
+    dot(g, cx - 2, cy - 2, '#ffffff'); dot(g, cx - 1, cy - 3, '#ffffff');
+    dot(g, cx, cy, shade(C.shade, -0.25));
+  }
+
+  /* ---------- 침실 */
+  function drawBedroomTop(g, C, theme) {
+    const x0 = ROOM_X.bed;
+    woodFloor(g, C, x0, TOP_WALL, ROOM_W, LH - TOP_WALL);
+    backWall(g, C, 'bed', x0);
+    windowTop(g, C, x0 + 20, 12, 36, 24, theme);
+    // 벽시계 (둥글게)
+    const F = mat(C.frame);
+    circle(g, x0 + 107, 21, 7, F);
+    circle(g, x0 + 107, 21, 5, { out: null, hi: theme === 'night' ? '#8a84c0' : '#ffffff', base: theme === 'night' ? '#6a64a0' : '#f4f4f8', mid: theme === 'night' ? '#6a64a0' : '#f4f4f8', dark: theme === 'night' ? '#585290' : '#e0e0ea' });
+    for (let k = 0; k < 4; k += 1) dot(g, x0 + 107, 21 - k, F.out);
+    for (let k = 0; k < 3; k += 1) dot(g, x0 + 107 + k, 21, F.out);
+    // 서랍장 + 위 소품
+    const W = mat(C.bedFrame);
+    solid(g, x0 + 6, TOP_WALL + 2, 32, 12, 12, 2, W, mat(shade(C.bedFrame, -0.18)), (i, j, c) => (j % 4 === 2 && hash(i, j) > 0.4 ? shade(c, -0.08) : null));
+    [[11, 21], [27, 21]].forEach(([a, b]) => { dot(g, x0 + a, TOP_WALL + b, W.hi); dot(g, x0 + a + 1, TOP_WALL + b, W.hi); });
+    blob(g, x0 + 10, TOP_WALL + 4, 9, 6, 1, mat(C.book[1]));
+    blob(g, x0 + 24, TOP_WALL + 3, 7, 8, 1, mat(C.frame));
+    // 협탁 + 스탠드 (빛 중심 137,74)
+    solid(g, x0 + 126, 64, 22, 12, 8, 2, W, mat(shade(C.bedFrame, -0.18)));
+    lampTop(g, C, x0 + 137, 69);
+    // 침대: 머리판 → 매트리스 → 베개 → 이불(주름·누빔) → 늘어진 이불 앞자락
+    const bx = x0 + 6, bw = 148;
+    solid(g, bx, 94, bw, 8, 6, 2, W, mat(shade(C.bedFrame, -0.18)));
+    blob(g, bx, 106, bw, 92, 3, mat(shade(C.pillow, -0.12)));
+    [16, 50, 86, 120].forEach((p) => {
+      blob(g, x0 + p, 111, 25, 14, 4, mat(C.pillow), (i, j, c) => (j === 6 && i > 4 && i < 20 ? shade(c, -0.1) : null));
+    });
+    const S = mat(C.sheet);
+    for (let j = 0; j < 66; j += 1) {
+      for (let i = 0; i < bw; i += 1) {
+        const top = 130 + Math.round(Math.sin(i / 9) * 1.2);   // 접힌 윗단이 물결
+        const yy = 130 + j;
+        if (yy < top) continue;
+        const ins = (a, b) => b >= top && a >= 0 && a < bw;
+        let c;
+        if (!ins(i - 1, yy) || !ins(i + 1, yy)) c = S.out;
+        else if (yy - top < 5) c = yy - top === 0 ? S.out : yy - top === 4 ? S.dark : S.hi;   // 접힌 단
+        else {
+          c = S.base;
+          const sx = (i + Math.round(Math.sin(yy / 7) * 1.5)) % 37;
+          if (sx === 0) c = S.dark;                              // 세로 누빔선
+          if ((yy - 140) % 14 === 0) c = S.dark;                // 가로 누빔선
+          if ((yy - 140) % 14 === 1 || sx === 1) c = S.hi;
+          else if (hash(i, yy) > 0.9) c = S.mid;
+          // 사람이 누운 자리처럼 살짝 볼록한 그늘
+          const bump = Math.sin(i / 34 * Math.PI) * 0;
+          if (bump) c = shade(c, bump);
+        }
+        dot(g, bx + i, yy, c);
+      }
+    }
+    // 이불 앞자락: 아래 끝이 물결
+    for (let i = 0; i < bw; i += 1) {
+      const end = 205 + Math.round(Math.sin(i / 6) * 1.5);
+      for (let yy = 196; yy <= end; yy += 1) {
+        let c = yy === end ? S.out : (i % 9 < 2 ? S.dark : S.mid);
+        if (i === 0 || i === bw - 1) c = S.out;
+        dot(g, bx + i, yy, c);
+      }
+    }
+    softShadow(g, bx + 4, 204, bw - 4, 7);
+    // 러그 + 슬리퍼 + 화분
+    rug(g, C, x0 + 36, 218, 88, 30, true);
+    blob(g, x0 + 52, 230, 6, 4, 2, mat(C.cushion)); blob(g, x0 + 60, 231, 6, 4, 2, mat(C.cushion));
+    plant(g, C, x0 + 9, 222);
+  }
+
+  /* ---------- 거실 */
+  function drawLivingTop(g, C, theme) {
+    const x0 = ROOM_X.living;
+    woodFloor(g, C, x0, TOP_WALL, ROOM_W, LH - TOP_WALL);
+    backWall(g, C, 'living', x0);
+    windowTop(g, C, x0 + 60, 10, 40, 28, theme);
+    curtain(g, C, x0 + 50, 7, 10, 38);
+    curtain(g, C, x0 + 100, 7, 10, 38);
+    blob(g, x0 + 47, 5, 66, 3, 1, mat(C.bedFrame));
+    // 액자: 언덕 풍경
+    const F = mat(C.frame);
+    blob(g, x0 + 14, 14, 26, 20, 1, F);
+    for (let j = 0; j < 14; j += 1) for (let i = 0; i < 20; i += 1) {
+      const hill = 8 + Math.round(Math.sin(i / 4) * 2);
+      dot(g, x0 + 17 + i, 17 + j, j > hill ? (j > hill + 3 ? shade(C.leaf, -0.2) : C.leaf) : C.sky2);
+    }
+    dot(g, x0 + 32, 19, C.star); dot(g, x0 + 33, 19, C.star); dot(g, x0 + 32, 20, C.star);
+    // 큰 러그
+    rug(g, C, x0 + 14, 112, 132, 134);
+    // 소파
+    const So = mat(C.sofa), Sf = mat(shade(C.sofa, -0.2)), Cu = mat(C.cushion);
+    const sx = x0 + 22, sw = 116;
+    softShadow(g, sx - 6, TOP_WALL + 38, sw + 12, 8);
+    blob(g, sx - 2, TOP_WALL + 1, sw + 4, 14, 4, So, (i, j, c) => (j === 8 ? shade(c, -0.08) : null));    // 등받이
+    blob(g, sx, TOP_WALL + 28, sw, 12, 3, Sf);                                                                // 앞면
+    [0, 1, 2].forEach((k) => {
+      blob(g, sx + 2 + k * 38, TOP_WALL + 13, 36, 20, 4, So, (i, j, c) => (Math.abs(i - 18) + Math.abs(j - 9) === 2 ? So.dark : null)); // 방석 + 단추
+    });
+    blob(g, sx - 10, TOP_WALL + 5, 12, 34, 5, So);   // 팔걸이
+    blob(g, sx + sw - 2, TOP_WALL + 5, 12, 34, 5, So);
+    blob(g, sx + 8, TOP_WALL + 14, 15, 12, 4, mat(C.rugAccent));   // 쿠션
+    blob(g, sx + sw - 24, TOP_WALL + 14, 15, 12, 4, mat(C.pillow));
+    // 커피 테이블 + 책 + 머그
+    const T = mat(C.table);
+    solid(g, x0 + 52, 136, 56, 20, 6, 3, T, mat(shade(C.table, -0.2)), (i, j, c) => {
+      const gy = Math.round(9 + Math.sin(i / 5) * 3);
+      return j === gy || j === gy + 6 ? shade(c, -0.1) : null;
+    });
+    blob(g, x0 + 59, 140, 14, 10, 1, mat(C.book[2]), (i, j) => (j === 1 && i > 1 && i < 12 ? C.paper : null));
+    circle(g, x0 + 96, 145, 4, mat(C.mug));
+    dot(g, x0 + 96, 145, '#3a2a20'); dot(g, x0 + 95, 145, '#3a2a20'); dot(g, x0 + 96, 144, '#3a2a20');
+    dot(g, x0 + 101, 144, shade(C.mug, -0.5)); dot(g, x0 + 101, 145, shade(C.mug, -0.5)); dot(g, x0 + 101, 146, shade(C.mug, -0.5));
+    // 화분 + 플로어 스탠드
+    plant(g, C, x0 + 139, TOP_WALL + 4);
+    plant(g, C, x0 + 10, 222);
+    softShadow(g, x0 + 142, 240, 12, 5);
+    for (let k = 0; k < 9; k += 1) dot(g, x0 + 148, 232 + k, shade(C.bedFrame, -0.3));
+    blob(g, x0 + 144, 240, 9, 4, 2, mat(shade(C.bedFrame, -0.1)));
+    lampTop(g, C, x0 + 148, 229);
+  }
+
+  /* ---------- 작업실 */
+  function drawWorkTop(g, C, theme) {
+    const x0 = ROOM_X.work;
+    tileFloor(g, C, x0, TOP_WALL, ROOM_W, LH - TOP_WALL);
+    backWall(g, C, 'work', x0);
+    // 책장: 칸마다 책 높이·색이 다르고, 한 권은 기울어짐
+    const W = mat(C.bedFrame);
+    blob(g, x0 + 10, 6, 64, 44, 2, W);
+    [9, 23, 37].forEach((sy, row) => {
+      for (let j = 0; j < 12; j += 1) for (let i = 0; i < 58; i += 1) dot(g, x0 + 13 + i, sy + j, shade(C.bedFrame, -0.45));
+      let bx = x0 + 14;
+      let n = 0;
+      while (bx < x0 + 68) {
+        const bw = 4 + Math.floor(hash(n, row) * 3);
+        const bh = 8 + Math.floor(hash(row, n) * 4);
+        const col = C.book[(n + row * 2) % C.book.length];
+        const B = mat(col);
+        if (bx + bw > x0 + 70) break;
+        if (n === 5 && row === 1) {
+          for (let j = 0; j < bh; j += 1) for (let i = 0; i < bw; i += 1) dot(g, bx + i + Math.floor(j / 3), sy + 12 - bh + j, i === 0 ? B.out : i === 1 ? B.hi : B.base);
+          bx += bw + 3;
+        } else {
+          for (let j = 0; j < bh; j += 1) for (let i = 0; i < bw; i += 1) {
+            let c = i === 0 || i === bw - 1 || j === 0 ? B.out : i === 1 ? B.hi : B.base;
+            if (j === 3 && i > 0 && i < bw - 1) c = B.hi;   // 책등 띠
+            dot(g, bx + i, sy + 12 - bh + j, c);
+          }
+          bx += bw;
+        }
+        n += 1;
+      }
+      blob(g, x0 + 11, sy + 12, 62, 3, 1, W);
     });
     // A.I.Mon 포스터
-    px(g, x0 + 97, 11, 42, 32, t.out);
-    px(g, x0 + 98, 12, 40, 30, t.frame);
-    px(g, x0 + 100, 14, 36, 26, theme === 'night' ? '#120f24' : '#2b2440');
-    px(g, x0 + 106, 20, 24, 3, HOLO);
-    px(g, x0 + 110, 26, 16, 2, '#ff7a59');
-    px(g, x0 + 112, 31, 12, 2, '#b15ce8');
-    // 서버 랙 (왼쪽 위)
-    box(g, t, x0 + 6, TOP_WALL + 2, 22, 14, 34, t.metal[0], t.metal[1], t.metal[2]);
-    for (let y = TOP_WALL + 20; y < TOP_WALL + 48; y += 6) { px(g, x0 + 8, y, 18, 4, t.metal[2]); px(g, x0 + 10, y + 1, 2, 2, t.led); px(g, x0 + 14, y + 1, 2, 2, hash(y, 3) > 0.5 ? '#ff7a59' : t.led); }
-    plant(g, t, x0 + 138, TOP_WALL + 4);
-    // 긴 책상 + 모니터 4대 (모니터 화면 좌표는 drawMonitors 와 같음: y 131~148)
-    box(g, t, x0 + 8, 124, 144, 32, 10, t.deskTop[0], t.deskFront, t.deskTop[1]);
-    px(g, x0 + 12, 167, 3, 8, t.deskFront); px(g, x0 + 145, 167, 3, 8, t.deskFront);
-    SPOTS.work.forEach((s) => {
+    const F = mat(C.frame);
+    blob(g, x0 + 96, 10, 44, 34, 2, F);
+    for (let j = 0; j < 26; j += 1) for (let i = 0; i < 36; i += 1) dot(g, x0 + 100 + i, 14 + j, theme === 'night' ? '#120f24' : '#2b2440');
+    for (let i = 0; i < 24; i += 1) { dot(g, x0 + 106 + i, 20, HOLO); dot(g, x0 + 106 + i, 21, shade('#7ff6ff', -0.3)); }
+    for (let i = 0; i < 16; i += 1) dot(g, x0 + 110 + i, 27, '#ff7a59');
+    for (let i = 0; i < 12; i += 1) dot(g, x0 + 112 + i, 32, '#b15ce8');
+    // 서버 랙
+    const M = mat(C.metal);
+    solid(g, x0 + 6, TOP_WALL + 2, 22, 12, 34, 2, M, mat(shade(C.metal, -0.15)));
+    for (let y = TOP_WALL + 18; y < TOP_WALL + 46; y += 6) {
+      blob(g, x0 + 8, y, 18, 5, 1, mat(shade(C.metal, 0.1)));
+      dot(g, x0 + 10, y + 2, C.led); dot(g, x0 + 13, y + 2, hash(y, 3) > 0.5 ? '#ff7a59' : C.led);
+      for (let k = 16; k < 24; k += 2) dot(g, x0 + k, y + 2, M.dark);
+    }
+    plant(g, C, x0 + 138, TOP_WALL + 3);
+    // 긴 책상
+    const D = mat(C.desk);
+    solid(g, x0 + 8, 124, 144, 32, 10, 3, D, mat(shade(C.desk, -0.22)), (i, j, c) => (j === 30 ? shade(c, -0.1) : hash(i, j) > 0.94 ? shade(c, 0.05) : null));
+    SPOTS.work.forEach((s, n) => {
       const mx = s.x - 13;
-      px(g, mx - 2, 128, 30, 23, t.out);
-      px(g, mx - 1, 129, 28, 21, t.monEdge);
-      px(g, mx + 1, 131, 24, 17, t.mon);
-      px(g, mx + 2, 132, 6, 1, 'rgba(255,255,255,.15)');
-      // 키보드 · 마우스
-      px(g, mx + 2, 151, 20, 4, t.out); px(g, mx + 3, 152, 18, 2, t.metal[2]);
-      px(g, mx + 24, 151, 3, 4, t.metal[2]);
+      // 모니터: 둥근 베젤, 화면(drawMonitors 가 켜는 자리), 반사 사선, 받침
+      blob(g, mx - 2, 128, 30, 23, 3, mat(shade(C.metal, -0.2)));
+      for (let j = 0; j < 17; j += 1) for (let i = 0; i < 24; i += 1) {
+        let c = C.mon;
+        if (i - j === 3 || i - j === 4) c = shade(C.mon, 0.12);
+        dot(g, mx + 1 + i, 131 + j, c);
+      }
+      blob(g, mx + 9, 150, 10, 3, 1, mat(shade(C.metal, -0.1)));
+      // 키보드(자판 점) + 마우스 + 머그 하나
+      blob(g, mx + 1, 152, 21, 5, 1, mat(C.metal), (i, j, c) => (j === 2 && i % 2 === 1 ? shade(c, -0.2) : null));
+      circle(g, mx + 26, 154, 2, mat(shade(C.metal, 0.2)));
+      if (n === 2) circle(g, mx - 5, 146, 3, mat(C.mug));
     });
-    // 바닥 케이블 + 의자 자국 없는 작업 매트
-    px(g, x0 + 20, 178, 120, 1, t.metal[1]);
-    rug(g, t, x0 + 20, 196, 120, 40);
+    // 바닥 케이블 (구불구불)
+    for (let i = 0; i < 118; i += 1) dot(g, x0 + 22 + i, 176 + Math.round(Math.sin(i / 8) * 2), shade(C.metal, -0.35));
+    rug(g, C, x0 + 20, 196, 120, 40, true);
     // 종이 더미
-    px(g, x0 + 124, 238, 14, 10, t.out); px(g, x0 + 125, 239, 12, 8, t.paper); px(g, x0 + 127, 241, 8, 1, t.metal[0]);
+    blob(g, x0 + 123, 238, 15, 11, 1, mat(C.paper), (i, j, c) => (j % 3 === 1 && i > 2 && i < 11 ? shade(c, -0.25) : null));
   }
 
-  // 방 사이 벽(위에서 본 벽 윗면) + 문, 바깥 벽
-  function wallsTop(g, t) {
-    const cap = (x, y, w, h) => { px(g, x, y, w, h, t.out); px(g, x + 1, y, w - 2, h, t.cap); px(g, x + 1, y, 1, h, t.capHi); };
+  // 방 사이 벽(위에서 본 윗면) + 문틀, 바깥 벽
+  function wallsTop(g, C) {
+    const P = mat(C.cap);
+    const cap = (x, y, w, h, r) => blob(g, x, y, w, h, r, P, (i, j, c) => (hash(i, j + y) > 0.9 ? P.mid : null));
     [ROOM_W, ROOM_W * 2].forEach((x) => {
-      cap(x - 4, 0, 8, DOOR.y0);
-      cap(x - 4, DOOR.y1, 8, LH - DOOR.y1);
-      // 문턱
-      px(g, x - 4, DOOR.y0, 8, DOOR.y1 - DOOR.y0, t.wood[3]);
-      px(g, x - 4, DOOR.y0 + 2, 8, 1, t.out); px(g, x - 4, DOOR.y1 - 3, 8, 1, t.out);
+      cap(x - 4, 0, 8, DOOR.y0 + 2, 2);
+      cap(x - 4, DOOR.y1 - 2, 8, LH - DOOR.y1 + 2, 2);
+      // 문턱 (나무)
+      const T = mat(C.table);
+      blob(g, x - 3, DOOR.y0 + 2, 6, DOOR.y1 - DOOR.y0 - 4, 1, T, (i, j, c) => (j % 8 === 7 ? T.dark : null));
     });
-    cap(0, 0, 4, LH);
-    cap(LW - 4, 0, 4, LH);
-    px(g, 0, LH - 6, LW, 6, t.out);
-    px(g, 0, LH - 5, LW, 5, t.cap);
-    px(g, 0, LH - 5, LW, 1, t.capHi);
+    cap(0, 0, 4, LH, 0);
+    cap(LW - 4, 0, 4, LH, 0);
+    cap(0, LH - 6, LW, 6, 0);
   }
 
   function buildRoom(theme) {
@@ -454,11 +618,11 @@
     c.width = LW;
     c.height = LH;
     const g = c.getContext('2d');
-    const t = TV[theme];
-    drawBedroomTop(g, t, theme);
-    drawLivingTop(g, t, theme);
-    drawWorkTop(g, t, theme);
-    wallsTop(g, t);
+    const C = TC[theme];
+    drawBedroomTop(g, C, theme);
+    drawLivingTop(g, C, theme);
+    drawWorkTop(g, C, theme);
+    wallsTop(g, C);
     return c;
   }
 
