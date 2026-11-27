@@ -381,7 +381,7 @@
     px(g, x0 + 92, 141, 7, 7, t.out); px(g, x0 + 93, 142, 5, 5, t.mug); px(g, x0 + 94, 143, 3, 2, '#3a2a20');
     // 화분 + 플로어 스탠드
     plant(g, t, x0 + 140, TOP_WALL + 6);
-    plant(g, t, x0 + 2, 226);
+    plant(g, t, x0 + 10, 222);
     px(g, x0 + 144, 225, 10, 10, t.out); px(g, x0 + 145, 226, 8, 8, t.lampShade); px(g, x0 + 145, 226, 8, 2, '#ffffff');
     px(g, x0 + 148, 235, 2, 8, t.lampBase); px(g, x0 + 145, 243, 8, 2, t.lampBase);
   }
@@ -1109,5 +1109,5 @@
     return { x: rect.left + p.x, y: rect.top + p.y };
   }
 
-  window.House = { init, setBots, setTheme, setSelected, anchorOf, stepRoom, botsIn, currentRoom, focusBot, focused };
+  window.House = { init, setBots, setTheme, setSelected, anchorOf, stepRoom, botsIn, currentRoom, focusBot, focused, roomCanvas: buildRoom };
 })();
