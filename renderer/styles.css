@@ -2416,3 +2416,76 @@ html.ui-holo .usage-summary { display: none; }
 
 /* 홀로그램 끄면 빛줄기(콘)도 꺼지게 (뒤 규칙이 opacity를 덮어쓰던 것) */
 html.ui-holo.dev-art.holo-off .holo-cone { opacity: 0 !important; animation: none !important; visibility: hidden; } /* 깜빡임 애니메이션이 opacity 0을 무시하고 그려서 숨김 */
+
+/* 9) 캐릭터 정보·설정 창을 홀로그램 화면 안에 띄운다 (기기 밖 별도 카드 금지) */
+html.ui-holo .lcd > .popover {
+  position: absolute;
+  z-index: 9;
+  width: 232px;
+  max-width: calc(100% - 16px);
+  background: rgba(6, 22, 44, .94);
+  color: var(--holo-ink);
+  border: 1px solid rgba(127, 230, 255, .55);
+  border-radius: 0;
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  box-shadow: inset 0 0 16px rgba(80, 200, 255, .22);
+  padding: 9px 10px;
+}
+html.ui-holo .lcd > .popover .popover-name { font-size: 11px; color: var(--holo-ink); }
+html.ui-holo .lcd > .popover .popover-role,
+html.ui-holo .lcd > .popover .kv dt,
+html.ui-holo .lcd > .popover .popover-log { color: var(--holo-muted); }
+html.ui-holo .lcd > .popover .kv.tight > div { font-size: 9.5px; }
+html.ui-holo .lcd > .popover .popover-log { border-top-color: rgba(127, 230, 255, .3); font-size: 9px; }
+
+html.ui-holo .lcd > .modal {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  padding: 0;
+  background: rgba(4, 14, 30, .5);
+  backdrop-filter: none;
+}
+html.ui-holo .lcd > .modal .modal-card {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  background: rgba(6, 22, 44, .96);
+  color: var(--holo-ink);
+  border: 0;
+  border-radius: 0;
+  box-shadow: inset 0 0 0 1.5px var(--holo-edge), inset 0 0 22px rgba(80, 200, 255, .22);
+  padding: 10px 16px 10px;
+  font-size: 10px;
+}
+html.ui-holo .lcd > .modal .modal-head h2 { font-size: 11px; letter-spacing: .08em; color: var(--holo-edge); }
+html.ui-holo .lcd > .modal .field { margin-top: 8px; }
+html.ui-holo .lcd > .modal .field > label,
+html.ui-holo .lcd > .modal .desc,
+html.ui-holo .lcd > .modal .advanced summary { color: var(--holo-muted); font-size: 9px; }
+html.ui-holo .lcd > .modal .switch { font-size: 9.5px; }
+html.ui-holo .lcd > .modal .switch input { accent-color: var(--holo-edge); }
+html.ui-holo .lcd > .modal input[type="text"] {
+  background: rgba(70, 230, 255, .06);
+  border: 1px solid rgba(127, 230, 255, .35);
+  border-radius: 0;
+  color: var(--holo-ink);
+  font-size: 9.5px;
+  padding: 5px 7px;
+}
+html.ui-holo .lcd > .modal input[type="text"]:focus { border-color: var(--holo-edge); }
+html.ui-holo .lcd > .modal .advanced { border-top-color: rgba(127, 230, 255, .25); margin-top: 10px; padding-top: 7px; }
+html.ui-holo .lcd > .modal .modal-foot { margin-top: 10px; }
+html.ui-holo .lcd .ghost { border-radius: 0; border-color: rgba(127, 230, 255, .45); color: var(--holo-ink); background: rgba(70, 230, 255, .08); font-size: 9.5px; }
+html.ui-holo .lcd .primary { border-radius: 0; background: var(--holo-edge); color: #06223a; font-size: 10px; }
+html.ui-holo .lcd .icon-close { color: var(--holo-muted); }
+html.ui-holo .lcd .icon-close:hover { color: var(--holo-ink); }
+html.ui-holo .lcd > .modal .modal-card { overflow-y: auto; display: flex; flex-direction: column; }
+html.ui-holo .lcd > .modal .toggles { gap: 2px; }
+html.ui-holo .lcd > .modal .switch { min-height: 0; padding: 1px 0; line-height: 1.3; }
+html.ui-holo .lcd > .modal .switch input { width: 11px; height: 11px; margin: 0; }
+html.ui-holo .lcd > .modal .desc { margin-top: 3px; }
+html.ui-holo .lcd > .modal .modal-foot { margin-top: auto; padding-top: 8px; }
+html.ui-holo .lcd > .modal .primary { padding: 4px 14px; }
+html.ui-holo .lcd > .modal .switch { gap: 6px; }

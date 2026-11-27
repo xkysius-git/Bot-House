@@ -354,10 +354,35 @@
       || window.House.anchorOf(id)
       || { x: window.innerWidth / 2, y: window.innerHeight / 2 };
     const rect = pop.getBoundingClientRect();
-    const left = Math.min(Math.max(12, anchor.x - rect.width / 2), window.innerWidth - rect.width - 12);
-    const top = Math.min(Math.max(12, anchor.y - rect.height - 14), window.innerHeight - rect.height - 12);
+    // 홀로그램 모드에서는 팝업이 홀로그램 화면 안에 있으므로 그 화면 기준으로 자리를 잡는다
+    const inHolo = pop.parentElement === el('lcdScreen');
+    const box = inHolo ? el('lcdScreen').getBoundingClientRect()
+      : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+    const pad = inHolo ? 8 : 12;
+    const ax = anchor.x - box.left;
+    const ay = anchor.y - box.top;
+    // 홀로그램에서는 위쪽 탭 줄을 가리지 않게 그 아래부터 띄운다
+    const topBar = inHolo ? lcdTopHeight() : 0;
+    const left = Math.min(Math.max(pad, ax - rect.width / 2), box.width - rect.width - pad);
+    const top = Math.min(Math.max(pad + topBar, ay - rect.height - 14), box.height - rect.height - pad);
     pop.style.left = `${left}px`;
     pop.style.top = `${top}px`;
+  }
+
+  // 홀로그램 모드: 캐릭터 정보·설정 창을 기기 밖 별도 카드가 아니라 홀로그램 화면 안에 띄운다
+  function lcdTopHeight() {
+    const lcd = el('lcdScreen');
+    const top = lcd && lcd.querySelector('.lcd-top');
+    if (!top) return 0;
+    return Math.max(0, top.getBoundingClientRect().bottom - lcd.getBoundingClientRect().top);
+  }
+
+  function mountHoloOverlays() {
+    if (!document.documentElement.classList.contains('ui-holo')) return;
+    const lcd = el('lcdScreen');
+    if (!lcd) return;
+    lcd.appendChild(el('popover'));
+    lcd.appendChild(el('settingsModal'));
   }
 
   function closePopover() {
@@ -1066,6 +1091,7 @@
       botDefs: app.botDefs,
       theme: app.settings.theme || 'night'
     });
+    mountHoloOverlays();
     bind();
     bindHoloKeys();
     setFocus('tabs');
