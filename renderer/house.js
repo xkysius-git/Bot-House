@@ -18,7 +18,7 @@
   const ROOM_W = 160;
   const WALL_H = 150;
   const LANE = 230;          // 방을 건널 때 걷는 바닥 줄
-  const DRAW = 52;           // 캐릭터 표시 크기 (논리 px)
+  const DRAW = 40;           // 캐릭터 표시 크기 (논리 px). 방이 주인공이라 작게 (장현님 11-27)
   const FLOAT = 10;          // 투사기 위로 떠 있는 높이
   const BOT_IDS = ['oiji', 'takuan', 'sbji', 'claude'];
   const ROOMS = ['bed', 'living', 'work'];
@@ -33,7 +33,7 @@
   const LIVING_BOX = { x0: 182, x1: 298, y0: 198, y1: 236 };
   const HOLO = '#7ff6ff';
   // 방 하나씩 보기: 화면 폭에 방 하나(+양옆 조금)를 꽉 채우고, 아래 키로 방을 옮긴다
-  const CAM_VIEW_W = ROOM_W + 48;
+  const CAM_VIEW_W = ROOM_W * 2;   // 방 하나 + 양옆 반 칸: 가구·인테리어가 보이게 (장현님 11-27: 너무 확대)
   const CAM_Y = { bed: 182, living: 190, work: 186 };
 
   const state = {

@@ -459,15 +459,21 @@
 
   function groundY() {
     // 아래쪽 미니 게이지에 발이 가리지 않게 기존보다 살짝 위에 세운다
+    // 홀로그램: 게이지 + 감정 바(약 80px) 위에 세운다
+    if (document.documentElement.classList.contains('ui-holo')) {
+      return Math.round(state.view.lh - 84 / (state.view.s || 1));
+    }
     return Math.round(state.view.lh - clamp(state.view.lh * 0.2, 20, 38));
   }
 
   function spriteSize() {
     const lh = state.view.lh;
     // 액정에 비해 너무 크지 않게 (장현님 피드백: 1.0.3은 너무 큼)
-    if (lh > 210) return 80;
-    if (lh > 92) return 52;
-    return 32;
+    // 홀로그램 Mons 화면은 캐릭터가 주인공이라 크게 (장현님 11-27: 너무 작음)
+    if (lh > 210) return 100;
+    if (lh > 150) return 96;
+    if (lh > 92) return 72;
+    return 40;
   }
 
   function starField() {
@@ -1070,9 +1076,11 @@
     const sp = spriteSize();
     const ground = groundY();
     const top = (ground - sp * 0.88) * v.s - 10;
-    bubble.style.left = `${cxOf() * v.s}px`;
-    bubble.style.top = `${Math.max(36, top)}px`;
-    bubble.className = `tama-bubble${look === 'work' ? ' work' : ''}${look === 'sleep' || look === 'offline' ? ' off' : ''}`;
+    // 홀로그램: 캐릭터가 커서 머리 위 말풍선이 윗줄 글자를 가린다 → 머리 오른쪽에 띄운다
+    const side = document.documentElement.classList.contains('ui-holo');
+    bubble.style.left = side ? `${(cxOf() + sp * 0.5) * v.s}px` : `${cxOf() * v.s}px`;
+    bubble.style.top = side ? `${(ground - sp * 0.85) * v.s}px` : `${Math.max(36, top)}px`;
+    bubble.className = `tama-bubble${side ? ' side' : ''}${look === 'work' ? ' work' : ''}${look === 'sleep' || look === 'offline' ? ' off' : ''}`;
   }
 
   /* ------------------------------------------------------- 루프 */
@@ -1176,5 +1184,14 @@
 
   function focusId() { return state.focus; }
 
-  window.Tama = { init, setBots, setTheme, setVisible, anchorOf, focus, act, setMode, focusId };
+  // 감정표현만 바로 띄우기 (기기 하단 감정 바에서 ✓)
+  function emote(kind) {
+    if (!state.focus) return;
+    hop();
+    startEmote(performance.now() / 1000, kind);
+    if (kind === "heart") hearts(4);
+    else if (kind === "star") sparkles(6);
+  }
+
+  window.Tama = { init, setBots, setTheme, setVisible, anchorOf, focus, act, emote, setMode, focusId };
 })();

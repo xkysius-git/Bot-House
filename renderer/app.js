@@ -33,6 +33,18 @@
   // SETTINGS 탭에서 ← → 로 고르고 ✓ 로 누르는 줄
   const SETTING_ROWS = ['claudeRestart', 'claudeLog', 'settingsBtn', 'updateRow'];
   const CARE = ['pet', 'snack', 'cheer', 'sleep'];
+  // Mons 화면 하단 감정 바: 아래 ◀ ▶ 로 고르고 ✓ 로 바로 실행 (장현님 11-27)
+  const EMOTE_BAR = [
+    { act: 'pet', icon: '🤚', label: '쓰다듬기' },
+    { act: 'snack', icon: '🍪', label: '간식' },
+    { act: 'cheer', icon: '✨', label: '응원' },
+    { act: 'sleep', icon: '🌙', label: '재우기' },
+    { emo: 'heart', icon: '💗', label: '하트' },
+    { emo: 'note', icon: '🎵', label: '노래' },
+    { emo: 'star', icon: '⭐', label: '반짝' },
+    { emo: 'excl', icon: '❗', label: '놀람' }
+  ];
+  const isHolo = () => document.documentElement.classList.contains('ui-holo');
 
   const stateLabel = {
     working: '작업 중',
@@ -383,6 +395,10 @@
     if (!lcd) return;
     lcd.appendChild(el('popover'));
     lcd.appendChild(el('settingsModal'));
+    // 홀로그램은 만지지 않는다: 안내 문구도 기기 버튼 기준으로
+    const hint = el('sceneHint');
+    if (hint) hint.textContent = '아래 ◀ ▶ 방 옮기기 · ✓ 캐릭터 상태 보기';
+    paintEmoteBar();
   }
 
   function closePopover() {
@@ -610,6 +626,7 @@
   function switchView(view) {
     const prev = app.view;
     app.view = VIEWS.includes(view) ? view : 'tamagotchi';
+    if (app.view === 'tamagotchi') setTimeout(paintEmoteBar, 0);
     // 홀로그램 화면: 카드 스택이 넘어가듯 회전 (장현님 11-25)
     const body = document.querySelector('.lcd-body');
     if (body && prev && prev !== app.view && document.documentElement.classList.contains('ui-holo')) {
@@ -664,10 +681,78 @@
     renderAll();
   }
 
+  /* 감정 바 (Mons 화면 하단) */
+  function paintEmoteBar() {
+    const bar = el('emoteBar');
+    if (!bar) return;
+    if (!bar.childElementCount) {
+      bar.innerHTML = EMOTE_BAR.map((e, i) => `<span class="emo" data-i="${i}"><i>${e.icon}</i>${e.label}</span>`).join('');
+    }
+    app.emoIdx = ((app.emoIdx || 0) % EMOTE_BAR.length + EMOTE_BAR.length) % EMOTE_BAR.length;
+    bar.querySelectorAll('.emo').forEach((n, i) => n.classList.toggle('sel', i === app.emoIdx));
+    const cur = bar.querySelector('.emo.sel');
+    if (cur) {
+      // 고른 칸이 바 가운데쯤 오게 가로로만 옮긴다
+      const left = cur.offsetLeft - (bar.clientWidth - cur.offsetWidth) / 2;
+      bar.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
+    }
+  }
+
+  function runEmote() {
+    const e = EMOTE_BAR[app.emoIdx || 0];
+    if (!e || !window.Tama) return;
+    if (e.act) window.Tama.act(e.act);
+    else if (window.Tama.emote) window.Tama.emote(e.emo);
+    const n = el('emoteBar') && el('emoteBar').querySelector('.emo.sel');
+    if (n) { n.classList.remove('fire'); void n.offsetWidth; n.classList.add('fire'); }
+  }
+
+  /* 설정 창 (홀로그램 안) — 아래 ◀ ▶ 로 항목 이동, ✓ 로 켜기/누르기 */
+  function modalControls() {
+    const card = el('settingsModal');
+    return Array.from(card.querySelectorAll('input, button, summary'))
+      .filter((n) => n.id !== 'settingsClose' && n.offsetParent !== null && !n.readOnly);
+  }
+
+  function paintModalSel() {
+    const list = modalControls();
+    el('settingsModal').querySelectorAll('.kbd-sel').forEach((n) => n.classList.remove('kbd-sel'));
+    if (!list.length) return;
+    app.modalIdx = ((app.modalIdx || 0) % list.length + list.length) % list.length;
+    const n = list[app.modalIdx];
+    const mark = n.closest('.switch') || n;
+    mark.classList.add('kbd-sel');
+    mark.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
+  function moveModal(step) {
+    app.modalIdx = (app.modalIdx || 0) + step;
+    paintModalSel();
+  }
+
+  function okModal() {
+    const n = modalControls()[app.modalIdx || 0];
+    if (!n) return;
+    if (n.tagName === 'INPUT' && n.type === 'text') { n.focus(); n.select(); return; } // 글자는 키보드로
+    n.click();
+    setTimeout(paintModalSel, 30); // 고급 설정을 펼치면 항목 수가 바뀐다
+  }
+
+  function openSettingsModal() {
+    fillSettings();
+    el('settingsModal').hidden = false;
+    app.modalIdx = 0;
+    paintModalSel();
+  }
+
   function holoMove(step) {
+    if (!el('settingsModal').hidden) { moveModal(step); return; }
     if (app.focus === 'tabs') { stepTab(step); return; }
     const care = app.sheet === 'care';
-    if (app.view === 'tamagotchi') { if (care) moveCare(step); else stepBot(step); }
+    if (app.view === 'tamagotchi') {
+      if (isHolo()) { app.emoIdx = (app.emoIdx || 0) + step; paintEmoteBar(); }
+      else if (care) moveCare(step); else stepBot(step);
+    }
     else if (app.view === 'house') {
       if (!el('popover').hidden) closePopover();
       // 아래 키 = 방 옮기기 (침실 ↔ 거실 ↔ 작업실). 옮긴 방의 첫 캐릭터를 고른다
@@ -686,8 +771,15 @@
   }
 
   function holoOk() {
-    if (app.focus === 'tabs') { setFocus('view'); paintSettingSel(); if (app.view !== 'house') return; }
-    if (app.view === 'tamagotchi') { if (app.sheet === 'care') runCare(); else openSheet('care'); }
+    if (!el('settingsModal').hidden) { okModal(); return; }
+    if (app.focus === 'tabs') {
+      setFocus('view'); paintSettingSel();
+      if (app.view !== 'house' && !(app.view === 'tamagotchi' && isHolo())) return;
+    }
+    if (app.view === 'tamagotchi') {
+      if (isHolo()) runEmote();
+      else if (app.sheet === 'care') runCare(); else openSheet('care');
+    }
     else if (app.view === 'house') {
       if (!el('popover').hidden) { closePopover(); return; }
       const here = window.House.botsIn && window.House.currentRoom ? window.House.botsIn(window.House.currentRoom()) : [];
@@ -718,7 +810,24 @@
     const ok = document.querySelector('.holo-key.ok');
     // 좌·우 키는 위/아래 반으로 나뉜 시소: 윗쪽 = 메뉴(탭) 전환, 아랫쪽 = 메뉴 안 이동 (홀로그램을 만지지 않고 조작)
     document.querySelectorAll('.holo-key[data-hkey="L"], .holo-key[data-hkey="R"]').forEach((k) => {
+      // 아랫쪽을 길게 누르면 (Mons 화면에서) 캐릭터 바꾸기 — 짧게는 감정 바 이동
+      if (k.dataset.half === 'bot') {
+        let t = null;
+        const stop = () => clearTimeout(t);
+        k.addEventListener('pointerdown', () => {
+          k.dataset.held = '';
+          if (app.view !== 'tamagotchi' || !isHolo() || !el('settingsModal').hidden) return;
+          t = setTimeout(() => {
+            k.dataset.held = '1';
+            if (window.Sfx) window.Sfx.play('click');
+            stepBot(k.dataset.hkey === 'L' ? -1 : 1);
+          }, 550);
+        });
+        k.addEventListener('pointerup', stop);
+        k.addEventListener('pointerleave', stop);
+      }
       k.addEventListener('click', () => {
+        if (k.dataset.held === '1') { k.dataset.held = ''; return; }
         if (window.Sfx) window.Sfx.play('click');
         const step = k.dataset.hkey === 'L' ? -1 : 1;
         if (k.dataset.half === 'top') { stepTab(step); setFocus('view'); paintSettingSel(); }
@@ -927,10 +1036,7 @@
     el('menuClose').addEventListener('click', () => { if (app.view === 'settings') { switchView('house'); setFocus('view'); } else closeSheet(); });
     el('careClose').addEventListener('click', closeSheet);
 
-    el('settingsBtn').addEventListener('click', () => {
-      fillSettings();
-      el('settingsModal').hidden = false;
-    });
+    el('settingsBtn').addEventListener('click', openSettingsModal);
     el('settingsClose').addEventListener('click', () => { el('settingsModal').hidden = true; });
     el('settingsModal').addEventListener('click', (e) => {
       if (e.target === el('settingsModal')) el('settingsModal').hidden = true;
@@ -999,8 +1105,26 @@
     });
 
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { holoBack(); return; }
-      if (e.target && e.target.tagName === 'INPUT') return;
+      if (e.key === 'Escape') {
+        if (e.target && e.target.tagName === 'INPUT' && e.target.type === 'text') { e.target.blur(); return; }
+        holoBack(); return;
+      }
+      if (e.target && e.target.tagName === 'INPUT' && e.target.type === 'text') {
+        if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
+        return;
+      }
+      // 설정 창이 열려 있으면 ← → Enter 는 창 안 이동·실행
+      if (!el('settingsModal').hidden && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Enter')) {
+        e.preventDefault();
+        if (e.key === 'Enter') okModal(); else moveModal(e.key === 'ArrowLeft' ? -1 : 1);
+        return;
+      }
+      // Mons 화면: 위·아래 = 캐릭터 바꾸기 (기기에서는 아래 ◀ ▶ 길게)
+      if (isHolo() && app.view === 'tamagotchi' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+        e.preventDefault();
+        stepBot(e.key === 'ArrowUp' ? -1 : 1);
+        return;
+      }
       // 홀로그램 3버튼과 같은 키: ← → = 이동, Enter = ✓
       if (el('settingsModal').hidden && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
         e.preventDefault();

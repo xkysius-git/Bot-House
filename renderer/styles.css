@@ -2489,3 +2489,37 @@ html.ui-holo .lcd > .modal .desc { margin-top: 3px; }
 html.ui-holo .lcd > .modal .modal-foot { margin-top: auto; padding-top: 8px; }
 html.ui-holo .lcd > .modal .primary { padding: 4px 14px; }
 html.ui-holo .lcd > .modal .switch { gap: 6px; }
+
+/* 10) 홀로그램은 보기 전용 — 클릭·터치·휠 모두 받지 않음. 조작은 기기 버튼으로만 (장현님 11-27) */
+html.ui-holo .screen, html.ui-holo .screen * { pointer-events: none !important; cursor: default !important; }
+
+/* 11) Mons 하단 감정 바: 아래 ◀ ▶ 로 고르고 ✓ 로 바로 실행 */
+.emote-bar { display: none; }
+html.ui-holo .emote-bar {
+  position: absolute; left: 10px; right: 10px; bottom: 8px; z-index: 4;
+  display: flex; gap: 6px; overflow: hidden; scroll-behavior: smooth;
+  padding: 3px 2px;
+}
+html.ui-holo .emote-bar .emo {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 4px;
+  font: 700 11px/1 'Galmuri11', monospace; color: var(--holo-muted, rgba(160,225,255,.62));
+  padding: 5px 9px; border: 1px solid rgba(127, 230, 255, .28); background: rgba(6, 22, 44, .55);
+  clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px);
+}
+html.ui-holo .emote-bar .emo i { font-style: normal; font-size: 12px; }
+html.ui-holo .emote-bar .emo.sel {
+  color: #06223a; background: var(--holo-edge, #7fe6ff); border-color: var(--holo-edge, #7fe6ff);
+  box-shadow: 0 0 10px var(--holo-glow, rgba(64,210,255,.55));
+}
+html.ui-holo .emote-bar .emo.fire { animation: emoFire .35s steps(3) 1; }
+@keyframes emoFire { 0% { transform: scale(1); } 50% { transform: scale(1.12); } 100% { transform: scale(1); } }
+/* 게이지는 감정 바 위로 */
+html.ui-holo .tama-meters { bottom: 40px !important; }
+html.ui-holo .tama-page { bottom: 72px !important; }
+
+/* 12) 설정 창: 기기 버튼으로 고른 항목 표시 */
+html.ui-holo .lcd > .modal .kbd-sel { outline: 1.5px solid var(--holo-edge, #7fe6ff); outline-offset: 2px; box-shadow: 0 0 10px var(--holo-glow, rgba(64,210,255,.55)); }
+html.ui-holo .lcd > .modal input[type="text"]:focus { outline: 1.5px solid #fff; }
+/* Mons 말풍선: 홀로그램에서는 머리 오른쪽 (윗줄 글자 가리지 않게) */
+html.ui-holo .tama-bubble.side { transform: translate(0, -50%) !important; }
+html.ui-holo .tama-bubble.side::after { display: none; }
