@@ -18,7 +18,7 @@
     popBot: null,
     usage: null,
     update: {},
-    view: 'tamagotchi',
+    view: 'house',   // 홈 = ROOM (장현님 11-26)
     sheet: null,
     careIdx: 0,
     focus: 'tabs',   // 'tabs' = 상단 탭 줄, 'view' = 화면 안
@@ -647,7 +647,7 @@
       if (!el('popover').hidden) closePopover();
       // 아래 키 = 방 옮기기 (침실 ↔ 거실 ↔ 작업실). 옮긴 방의 첫 캐릭터를 고른다
       const id = window.House.stepRoom ? window.House.stepRoom(step) : null;
-      if (window.House.stepRoom) { if (id) { app.selected = id; window.House.setSelected(id); renderAll(); } }
+      if (window.House.stepRoom) { app.selected = id; window.House.setSelected(id); renderAll(); }
       else stepRoomBot(step);
     }
     else if (app.view === 'usage') { if (document.documentElement.classList.contains('ui-holo')) { app.usageIdx = (app.usageIdx || 0) + step; paintUsagePage(); } else pageStep(step); }
@@ -661,9 +661,14 @@
   }
 
   function holoOk() {
-    if (app.focus === 'tabs') { setFocus('view'); paintSettingSel(); return; }
+    if (app.focus === 'tabs') { setFocus('view'); paintSettingSel(); if (app.view !== 'house') return; }
     if (app.view === 'tamagotchi') { if (app.sheet === 'care') runCare(); else openSheet('care'); }
-    else if (app.view === 'house') openPopover(app.selected || BOT_IDS[0]);
+    else if (app.view === 'house') {
+      if (!el('popover').hidden) { closePopover(); return; }
+      const here = window.House.botsIn && window.House.currentRoom ? window.House.botsIn(window.House.currentRoom()) : [];
+      const id = (app.selected && here.includes(app.selected)) ? app.selected : (here[0] || app.selected || BOT_IDS[0]);
+      openPopover(id);
+    }
     else if (app.view === 'usage') loadUsage(true);
     else if (app.view === 'settings') {
       if (app.sheet !== 'menu') { openSheet('menu'); return; }
@@ -678,7 +683,9 @@
     if (!el('popover').hidden) { closePopover(); return; }
     if (app.sheet && app.view !== 'settings') { closeSheet(); return; }
     if (app.sheet === 'log') { openSheet('menu'); return; }
-    setFocus('tabs');
+    // 더 닫을 게 없으면 홈(ROOM)으로. ROOM에서는 그대로
+    if (app.view !== 'house') switchView('house');
+    setFocus('view');
     paintSettingSel();
   }
 
@@ -693,6 +700,10 @@
         else { if (app.focus === 'tabs') setFocus('view'); holoMove(step); }
       });
     });
+
+    // 우측 하단 그립 = 뒤로가기
+    const back = document.querySelector('.hb-back');
+    if (back) back.addEventListener('click', () => { if (window.Sfx) window.Sfx.play('click'); holoBack(); });
 
     if (!ok) return;
     let timer = null;
@@ -888,7 +899,7 @@
     });
 
     // 메뉴 시트
-    el('menuClose').addEventListener('click', () => { if (app.view === 'settings') { switchView('tamagotchi'); setFocus('tabs'); } else closeSheet(); });
+    el('menuClose').addEventListener('click', () => { if (app.view === 'settings') { switchView('house'); setFocus('view'); } else closeSheet(); });
     el('careClose').addEventListener('click', closeSheet);
 
     el('settingsBtn').addEventListener('click', () => {
@@ -1019,6 +1030,8 @@
       if (pop.contains(e.target)) return;
       if (e.target.closest('.status-chip') || e.target.closest('.bot-row')) return;
       if (e.target.closest('#scene')) return;
+      // 기기 키(가운데=열기/닫기, 아래=방 이동, 그립=뒤로)는 각자 상태창을 다룬다
+      if (e.target.closest('.holo-key, .hb-top, .hb-back')) return;
       closePopover();
     });
   }
@@ -1078,7 +1091,7 @@
 
 /* 물리 버튼 누름 애니: 누르는 동안 .down, 놓을 때 .pop (마우스·터치·키보드 공통) */
 (function () {
-  const SEL = '.holo-key, .hb-top, .rail-switch, .win-btn.close';
+  const SEL = '.holo-key, .hb-top, .hb-back, .rail-switch, .win-btn.close';
   const release = (b) => {
     if (!b.classList.contains('down')) return;
     b.classList.remove('down');

@@ -26,11 +26,11 @@ const WORKING_WINDOW_MS = 25000;   // 최근 25초 안에 활동이 있으면 '�
 const SIGNAL_TTL_MS = 30 * 60 * 1000; // 외부에서 받은 상태는 30분 뒤 기본값으로
 const HEARTBEAT_TTL_MS = 10 * 60 * 1000; // 원격 봇이 10분 넘게 신호가 없으면 오프라인
 const GIST_POLL_MS = 60 * 1000;          // Gist 상태 확인 간격
-const EXTERNAL_WORKING_MS = 60 * 1000;
+const EXTERNAL_WORKING_MS = 60 * 1000;   // 다른 창 세션: 대화 기록이 1분 안에 갱신되면 '작업 중'
 const CHAT_ACTIVE_MS = 3 * 60 * 1000;    // 봇이 채팅에 말하면 3분은 '작업 중'
 const CHAT_TASK_MS = 30 * 60 * 1000;     // '작업 시작' 류 말은 완료 보고 전까지 최대 30분
 const SLEEP_AFTER_MS = 20 * 60 * 1000;   // 20분 넘게 조용하면 침실에서 잔다
-const CHATLOG_DIR_DEFAULT = process.platform === 'win32' ? 'C:\claude-telegram\chatlog' : '';   // 다른 창 세션: 대화 기록이 1분 안에 갱신되면 '작업 중'
+const CHATLOG_DIR_DEFAULT = process.platform === 'win32' ? 'C:/claude-telegram/chatlog' : ''; // 이 PC의 그룹 채팅 기록 폴더
 
 let win = null;
 let tray = null;
@@ -101,7 +101,8 @@ function computeBots() {
       base.connected = true;
     }
     // 오래 조용하면 침실에서 잔다 (작업 중·오프라인이 아닐 때만)
-    base.sleeping = base.state === 'idle' && Boolean(base.lastActivity) && now - base.lastActivity > SLEEP_AFTER_MS;
+    // 활동 기록이 아예 없거나(오늘 한 번도 말 안 함) 20분 넘게 조용하면 침실
+    base.sleeping = base.state === 'idle' && (!base.lastActivity || now - base.lastActivity > SLEEP_AFTER_MS);
     if (base.sleeping) base.note = '침실에서 자는 중';
     out[bot.id] = base;
   }
