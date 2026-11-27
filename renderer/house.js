@@ -147,128 +147,306 @@
     return !!(sh && sh.rows && sh.rows.emotion);
   }
 
-  /* ------------------------------------------------------------ 임시 방 그림 */
-  const PAL = {
-    night: {
-      bed: { wall: '#1c1a3c', wall2: '#232048' }, living: { wall: '#2a1d36', wall2: '#33233f' }, work: { wall: '#16263a', wall2: '#1b2e45' },
-      floor: '#2a2140', floor2: '#231b37', base: '#0f0b1f', pillar: '#120e24', pillar2: '#1d1735',
-      sky: '#0d1430', sky2: '#16204a', frame: '#3b3160', glass: 'rgba(120,160,255,.08)',
-      wood: '#4a3350', wood2: '#3a2742', cloth: '#3d4a8a', cloth2: '#2f3a70', pillow: '#a7b2e6',
-      sofa: '#6a3c5a', sofa2: '#552e48', rug: '#3a2850', rug2: '#47325f', leaf: '#2f7a5a', leaf2: '#235c44', pot: '#6a4a3a',
-      desk: '#3a3148', desk2: '#2b2438', mon: '#0e0c18', monEdge: '#4a4060', shelf: '#3a2d4c', book: ['#7a4bd0', '#d06a4b', '#4bb0d0', '#d0b04b'],
-      lamp: '#ffd98a'
-    },
-    day: {
-      bed: { wall: '#dfe6f5', wall2: '#e9eefa' }, living: { wall: '#f4e4cf', wall2: '#f8ecdc' }, work: { wall: '#dcefea', wall2: '#e6f5f1' },
-      floor: '#c99a6b', floor2: '#b98a5d', base: '#8a6244', pillar: '#a98a70', pillar2: '#c4a88e',
-      sky: '#9fd6ff', sky2: '#cdeaff', frame: '#ffffff', glass: 'rgba(255,255,255,.15)',
-      wood: '#9a6a48', wood2: '#83573a', cloth: '#7a92e6', cloth2: '#6177c8', pillow: '#ffffff',
-      sofa: '#e07a5f', sofa2: '#c4654c', rug: '#e8c48a', rug2: '#d9ad6c', leaf: '#4fae6a', leaf2: '#3a8c52', pot: '#b0704a',
-      desk: '#b48a66', desk2: '#987052', mon: '#1d1a28', monEdge: '#57506a', shelf: '#a07a58', book: ['#7a4bd0', '#e0664b', '#3fa0c8', '#e0b23f'],
-      lamp: '#fff1c2'
-    }
-  };
-
   function px(g, x, y, w, h, c) {
     g.fillStyle = c;
     g.fillRect(x, y, w, h);
   }
 
-  function drawWindow(g, p, x, y, w, h, theme) {
-    px(g, x - 2, y - 2, w + 4, h + 4, p.frame);
-    px(g, x, y, w, h, p.sky);
-    px(g, x, y + Math.floor(h * 0.55), w, Math.ceil(h * 0.45), p.sky2);
-    if (theme === 'night') {
-      px(g, x + w - 12, y + 5, 6, 6, '#fff3c4');
-      px(g, x + w - 10, y + 5, 4, 4, p.sky);
-      [[4, 6], [10, 14], [17, 4], [6, 20]].forEach(([sx, sy]) => { if (sx < w - 14) px(g, x + sx, y + sy, 1, 1, '#ffffff'); });
-    } else {
-      px(g, x + w - 13, y + 5, 7, 7, '#fff2a0');
-      px(g, x + 3, y + h - 8, 12, 3, '#ffffff');
-      px(g, x + 6, y + h - 10, 6, 2, '#ffffff');
+  /* ------------------------------------------------------------ 방 그림 (탑뷰) */
+  // 장현님 11-27: "너무 평면적" → 위에서 내려다보는 실내. 뒷벽은 위쪽 띠, 바닥이 넓게 보이고
+  // 가구는 윗면 + 앞면(높이) + 그림자 + 진한 외곽선. 캐릭터 자리(SPOTS·LIVING_BOX)·램프·모니터 좌표는 그대로.
+  const TOP_WALL = 56;       // 뒷벽 면이 끝나는 높이 (여기부터 바닥)
+  const DOOR = { y0: 198, y1: 254 };   // 방 사이 문 (LANE 230 지나감)
+
+  const TV = {
+    night: {
+      out: '#07050f', shadow: 'rgba(0,0,0,.35)', cap: '#141026', capHi: '#2a2448',
+      wall: { bed: ['#24204a', '#2b2655', '#1b1838'], living: ['#33223f', '#3b2949', '#271a31'], work: ['#18293f', '#1e324b', '#122033'] },
+      base: '#120e22',
+      wood: ['#4f3756', '#5c4163', '#432e49', '#38273d'],
+      tile: ['#22314a', '#283a56', '#1b2840'],
+      rug: ['#43305e', '#523b70', '#352650', '#c0a060'],
+      sky: '#0d1430', sky2: '#16204a', frame: '#4a3f72', moon: '#fff3c4',
+      bedWood: ['#6b4a5c', '#573c4b', '#3f2b37'], sheet: ['#4a5aa0', '#3d4a88', '#2e3970', '#6576bd'], pillow: ['#b9c2ee', '#8e98cc'],
+      sofa: ['#7a4466', '#663856', '#4f2b43', '#8c5277'],
+      deskTop: ['#4a3f5c', '#574a6c'], deskFront: '#352c45', metal: ['#3d3a52', '#2b293c', '#575473'],
+      mon: '#0c0a16', monEdge: '#4d4466',
+      leaf: ['#2f7a5a', '#3c946d', '#225a43'], pot: ['#7a5242', '#5e3e33'],
+      book: ['#7a4bd0', '#d06a4b', '#4bb0d0', '#d0b04b', '#5ac08a'],
+      lampShade: '#ffd98a', lampBase: '#5c4a3a', paper: '#cfd6f0', mug: '#d06a4b', led: '#7ff6ff'
+    },
+    day: {
+      out: '#3a2a20', shadow: 'rgba(60,35,20,.22)', cap: '#8a6c58', capHi: '#b39780',
+      wall: { bed: ['#dfe6f5', '#e9eefa', '#c9d2e8'], living: ['#f4e4cf', '#f9eddc', '#e3cfb5'], work: ['#dcefea', '#e8f6f2', '#c4ddd6'] },
+      base: '#9a7458',
+      wood: ['#c99a6b', '#d4a777', '#b98a5d', '#a77a50'],
+      tile: ['#e6ece9', '#f2f5f3', '#cdd6d2'],
+      rug: ['#e8c48a', '#f0d29e', '#d9ad6c', '#c0603e'],
+      sky: '#9fd6ff', sky2: '#cdeaff', frame: '#ffffff', moon: '#fff2a0',
+      bedWood: ['#a5764f', '#8c623f', '#6e4b30'], sheet: ['#7a92e6', '#6a82d6', '#5a6fc0', '#98acf0'], pillow: ['#ffffff', '#dfe4f5'],
+      sofa: ['#e07a5f', '#c9664d', '#a9523d', '#ec9178'],
+      deskTop: ['#c49a74', '#d3ab86'], deskFront: '#a17a58', metal: ['#8c8aa0', '#706e86', '#b0aec4'],
+      mon: '#1d1a28', monEdge: '#57506a',
+      leaf: ['#4fae6a', '#66c07e', '#3a8c52'], pot: ['#c07a50', '#a0623e'],
+      book: ['#7a4bd0', '#e0664b', '#3fa0c8', '#e0b23f', '#4fae6a'],
+      lampShade: '#fff1c2', lampBase: '#8a6a4a', paper: '#ffffff', mug: '#e0664b', led: '#3fa0c8'
     }
-    px(g, x + Math.floor(w / 2) - 1, y, 2, h, p.frame);
-    px(g, x, y + Math.floor(h / 2) - 1, w, 2, p.frame);
-    px(g, x - 4, y + h + 2, w + 8, 3, p.frame);
+  };
+
+  // 같은 좌표면 늘 같은 값 (질감용 잡음)
+  function hash(x, y) {
+    let h = (x * 374761393 + y * 668265263) | 0;
+    h = (h ^ (h >>> 13)) * 1274126177;
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
   }
 
-  function drawBedroom(g, p, theme) {
+  // 위에서 본 물건: 윗면(w×d) + 앞면(높이 h) + 아래 그림자 + 외곽선
+  function box(g, t, x, y, w, d, h, top, front, hi) {
+    px(g, x + 1, y + d + h, w, 3, t.shadow);
+    px(g, x - 1, y - 1, w + 2, d + h + 2, t.out);
+    px(g, x, y, w, d, top);
+    if (hi) px(g, x, y, w, 1, hi);
+    if (h > 0) {
+      px(g, x, y + d, w, h, front);
+      px(g, x, y + d, w, 1, t.out);
+    }
+  }
+
+  // 면에 잔무늬(디더) 찍기: 넓은 단색 면이 클로즈업에서 비어 보이지 않게
+  function dither(g, x, y, w, h, c, rate) {
+    for (let yy = y; yy < y + h; yy += 2) {
+      for (let xx = x + (yy % 4 ? 1 : 0); xx < x + w; xx += 2) if (hash(xx, yy) < rate) px(g, xx, yy, 1, 1, c);
+    }
+  }
+
+  function woodFloor(g, t, x0, y0, w, h) {
+    for (let y = y0, row = 0; y < y0 + h; y += 8, row += 1) {
+      const off = (row * 37) % 48;
+      for (let x = x0 - off; x < x0 + w; x += 48) {
+        const bx = Math.max(x0, x);
+        const bw = Math.min(x0 + w, x + 48) - bx;
+        const c = t.wood[Math.floor(hash(x, row) * 3)];
+        px(g, bx, y, bw, 8, c);
+        px(g, bx, y + 7, bw, 1, t.wood[3]);
+        if (x >= x0) px(g, x, y, 1, 7, t.wood[3]);
+        // 나뭇결
+        const gx = bx + 6 + Math.floor(hash(row, x) * Math.max(1, bw - 18));
+        if (bw > 20) px(g, gx, y + 3, 10, 1, t.wood[2]);
+      }
+    }
+  }
+
+  function tileFloor(g, t, x0, y0, w, h) {
+    for (let y = y0; y < y0 + h; y += 16) {
+      for (let x = x0; x < x0 + w; x += 16) {
+        const c = ((x - x0) / 16 + (y - y0) / 16) % 2 ? t.tile[0] : t.tile[1];
+        px(g, x, y, Math.min(16, x0 + w - x), Math.min(16, y0 + h - y), c);
+        px(g, x, y, Math.min(16, x0 + w - x), 1, t.tile[2]);
+        px(g, x, y, 1, Math.min(16, y0 + h - y), t.tile[2]);
+      }
+    }
+  }
+
+  function rug(g, t, x, y, w, h) {
+    px(g, x - 1, y - 1, w + 2, h + 2, t.out);
+    px(g, x, y, w, h, t.rug[2]);
+    px(g, x + 3, y + 3, w - 6, h - 6, t.rug[0]);
+    px(g, x + 6, y + 6, w - 12, h - 12, t.rug[1]);
+    dither(g, x + 6, y + 6, w - 12, h - 12, t.rug[0], 0.18);
+    // 무늬: 가장자리 점선 + 가운데 마름모
+    for (let i = x + 8; i < x + w - 8; i += 6) { px(g, i, y + 4, 2, 1, t.rug[3]); px(g, i, y + h - 5, 2, 1, t.rug[3]); }
+    const cx = x + Math.floor(w / 2);
+    const cy = y + Math.floor(h / 2);
+    for (let k = 0; k < 6; k += 1) {
+      px(g, cx - k, cy - 6 + k, 1, 1, t.rug[3]); px(g, cx + k, cy - 6 + k, 1, 1, t.rug[3]);
+      px(g, cx - k, cy + 6 - k, 1, 1, t.rug[3]); px(g, cx + k, cy + 6 - k, 1, 1, t.rug[3]);
+    }
+    // 술 장식
+    for (let i = x + 2; i < x + w - 2; i += 4) { px(g, i, y - 3, 1, 2, t.rug[2]); px(g, i, y + h + 1, 1, 2, t.rug[2]); }
+  }
+
+  function plant(g, t, x, y) {
+    box(g, t, x + 3, y + 14, 12, 6, 6, t.pot[0], t.pot[1]);
+    px(g, x - 1, y - 1, 20, 17, t.out);
+    px(g, x, y, 18, 15, t.leaf[2]);
+    [[2, 2, 7, 6], [9, 1, 7, 6], [4, 7, 10, 6], [1, 8, 5, 5], [12, 8, 5, 5]].forEach(([a, b, c, d]) => px(g, x + a, y + b, c, d, t.leaf[0]));
+    [[4, 3], [11, 2], [7, 8], [13, 10]].forEach(([a, b]) => px(g, x + a, y + b, 2, 1, t.leaf[1]));
+  }
+
+  function backWall(g, t, room, x0) {
+    const [c, c2, c3] = t.wall[room];
+    px(g, x0, 0, ROOM_W, TOP_WALL, c);
+    for (let x = x0 + 4; x < x0 + ROOM_W; x += 10) px(g, x, 6, 1, TOP_WALL - 14, c2);
+    px(g, x0, TOP_WALL - 10, ROOM_W, 1, c3);
+    px(g, x0, TOP_WALL - 9, ROOM_W, 5, c2);
+    px(g, x0, TOP_WALL - 4, ROOM_W, 4, t.base);
+    px(g, x0, 0, ROOM_W, 5, t.cap);
+    px(g, x0, 4, ROOM_W, 1, t.out);
+  }
+
+  function windowTop(g, t, x, y, w, h, theme) {
+    px(g, x - 3, y - 3, w + 6, h + 6, t.out);
+    px(g, x - 2, y - 2, w + 4, h + 4, t.frame);
+    px(g, x, y, w, h, t.sky);
+    px(g, x, y + Math.floor(h * 0.55), w, Math.ceil(h * 0.45), t.sky2);
+    if (theme === 'night') {
+      px(g, x + w - 10, y + 4, 5, 5, t.moon);
+      px(g, x + w - 9, y + 4, 4, 3, t.sky);
+      [[3, 5], [9, 12], [15, 3]].forEach(([a, b]) => { if (a < w - 12) px(g, x + a, y + b, 1, 1, '#ffffff'); });
+    } else {
+      px(g, x + w - 11, y + 4, 6, 6, t.moon);
+      px(g, x + 3, y + h - 7, 10, 2, '#ffffff');
+    }
+    px(g, x + Math.floor(w / 2) - 1, y, 2, h, t.frame);
+    px(g, x - 4, y + h + 2, w + 8, 2, t.frame);
+  }
+
+  function drawBedroomTop(g, t, theme) {
     const x0 = ROOM_X.bed;
-    drawWindow(g, p, x0 + 22, 34, 38, 34, theme);
-    // 벽 시계
-    px(g, x0 + 104, 36, 16, 16, p.frame);
-    px(g, x0 + 106, 38, 12, 12, theme === 'night' ? '#2b2650' : '#ffffff');
-    px(g, x0 + 111, 40, 2, 5, p.base);
-    px(g, x0 + 111, 44, 5, 2, p.base);
-    // 벽등
-    px(g, x0 + 132, 78, 10, 4, p.wood);
-    px(g, x0 + 134, 70, 6, 8, p.lamp);
-    // 큰 침대 (베개 4개)
-    px(g, x0 + 8, 140, 144, 22, p.wood);
-    px(g, x0 + 8, 140, 144, 3, p.wood2);
-    px(g, x0 + 6, 160, 148, 34, p.cloth);
-    px(g, x0 + 6, 184, 148, 10, p.cloth2);
-    px(g, x0 + 6, 194, 148, 6, p.wood2);
-    [16, 50, 86, 120].forEach((bx) => {
-      px(g, x0 + bx, 162, 24, 9, p.pillow);
-      px(g, x0 + bx, 169, 24, 2, p.cloth2);
+    woodFloor(g, t, x0, TOP_WALL, ROOM_W, LH - TOP_WALL);
+    backWall(g, t, 'bed', x0);
+    windowTop(g, t, x0 + 20, 12, 36, 24, theme);
+    // 벽시계
+    px(g, x0 + 99, 13, 16, 16, t.out);
+    px(g, x0 + 100, 14, 14, 14, t.frame);
+    px(g, x0 + 102, 16, 10, 10, theme === 'night' ? '#2b2650' : '#ffffff');
+    px(g, x0 + 106, 17, 2, 5, t.out); px(g, x0 + 106, 21, 4, 1, t.out);
+    // 서랍장 (왼쪽 위)
+    box(g, t, x0 + 6, TOP_WALL + 4, 30, 12, 12, t.bedWood[0], t.bedWood[1], t.bedWood[0]);
+    px(g, x0 + 10, TOP_WALL + 19, 8, 1, t.bedWood[2]); px(g, x0 + 24, TOP_WALL + 19, 8, 1, t.bedWood[2]);
+    px(g, x0 + 12, TOP_WALL + 6, 6, 4, t.book[1]); px(g, x0 + 24, TOP_WALL + 5, 5, 5, t.paper);
+    // 협탁 + 스탠드 (램프 빛 중심 137,74)
+    box(g, t, x0 + 126, 64, 22, 12, 8, t.bedWood[0], t.bedWood[1]);
+    px(g, x0 + 131, 62, 12, 10, t.out);
+    px(g, x0 + 132, 63, 10, 8, t.lampShade);
+    px(g, x0 + 132, 63, 10, 2, '#ffffff');
+    // 큰 침대 (4명): 머리판 → 베개 → 이불 → 앞면
+    const bx = x0 + 6, bw = 148;
+    box(g, t, bx, 96, bw, 8, 6, t.bedWood[0], t.bedWood[1], t.bedWood[0]);
+    px(g, bx - 1, 109, bw + 2, 96, t.out);
+    px(g, bx, 110, bw, 86, t.pillow[1]);
+    [16, 50, 86, 120].forEach((p) => {
+      px(g, x0 + p - 1, 113, 26, 13, t.out);
+      px(g, x0 + p, 114, 24, 11, t.pillow[0]);
+      px(g, x0 + p, 122, 24, 3, t.pillow[1]);
     });
+    px(g, bx, 134, bw, 62, t.sheet[0]);
+    px(g, bx, 134, bw, 5, t.sheet[3]);
+    px(g, bx, 139, bw, 1, t.sheet[2]);
+    dither(g, bx, 140, bw, 50, t.sheet[1], 0.12);
+    for (let x = bx + 37; x < bx + bw; x += 37) px(g, x, 140, 1, 50, t.sheet[2]);
+    for (let y = 152; y < 190; y += 13) px(g, bx, y, bw, 1, t.sheet[2]);
+    px(g, bx, 190, bw, 6, t.sheet[1]);
+    px(g, bx, 196, bw, 8, t.bedWood[1]);
+    px(g, bx, 196, bw, 1, t.out);
+    px(g, bx + 1, 205, bw, 3, t.shadow);
+    // 러그 + 슬리퍼
+    rug(g, t, x0 + 36, 216, 88, 32);
+    px(g, x0 + 50, 230, 6, 4, t.sheet[3]); px(g, x0 + 58, 231, 6, 4, t.sheet[3]);
+    plant(g, t, x0 + 8, 226);
   }
 
-  function drawLiving(g, p, theme) {
+  function drawLivingTop(g, t, theme) {
     const x0 = ROOM_X.living;
-    drawWindow(g, p, x0 + 58, 26, 44, 38, theme);
-    // 커튼
-    px(g, x0 + 50, 22, 8, 50, p.sofa2);
-    px(g, x0 + 102, 22, 8, 50, p.sofa2);
-    px(g, x0 + 48, 20, 64, 3, p.wood2);
+    woodFloor(g, t, x0, TOP_WALL, ROOM_W, LH - TOP_WALL);
+    backWall(g, t, 'living', x0);
+    windowTop(g, t, x0 + 60, 10, 40, 28, theme);
+    px(g, x0 + 52, 8, 7, 38, t.sofa[2]); px(g, x0 + 101, 8, 7, 38, t.sofa[2]);
+    px(g, x0 + 50, 6, 60, 3, t.bedWood[2]);
     // 액자
-    px(g, x0 + 14, 46, 22, 16, p.frame);
-    px(g, x0 + 16, 48, 18, 12, p.leaf);
-    px(g, x0 + 16, 54, 18, 6, p.cloth);
-    // 소파 (벽에 붙임)
-    px(g, x0 + 22, 118, 116, 20, p.sofa);
-    px(g, x0 + 22, 118, 116, 3, p.sofa2);
-    px(g, x0 + 16, 130, 128, 26, p.sofa);
-    px(g, x0 + 16, 148, 128, 8, p.sofa2);
-    px(g, x0 + 14, 124, 10, 32, p.sofa2);
-    px(g, x0 + 136, 124, 10, 32, p.sofa2);
-    px(g, x0 + 22, 156, 4, 4, p.base);
-    px(g, x0 + 134, 156, 4, 4, p.base);
-    // 화분
-    px(g, x0 + 146, 132, 10, 22, p.pot);
-    px(g, x0 + 142, 108, 18, 24, p.leaf);
-    px(g, x0 + 146, 104, 10, 8, p.leaf2);
-    px(g, x0 + 140, 118, 6, 8, p.leaf2);
-    // 러그
-    px(g, x0 + 18, 196, 124, 58, p.rug);
-    px(g, x0 + 22, 200, 116, 50, p.rug2);
-    px(g, x0 + 26, 204, 108, 42, p.rug);
+    px(g, x0 + 15, 15, 24, 18, t.out);
+    px(g, x0 + 16, 16, 22, 16, t.frame);
+    px(g, x0 + 18, 18, 18, 7, t.sky2);
+    px(g, x0 + 18, 25, 18, 5, t.leaf[0]);
+    // 큰 러그
+    rug(g, t, x0 + 14, 112, 132, 134);
+    // 소파 (뒷벽에 붙여 아래를 봄): 등받이 → 방석 → 팔걸이 → 앞면
+    const sx = x0 + 22, sw = 116;
+    box(g, t, sx, TOP_WALL + 2, sw, 10, 8, t.sofa[0], t.sofa[1], t.sofa[3]);
+    px(g, sx - 1, TOP_WALL + 19, sw + 2, 22, t.out);
+    px(g, sx, TOP_WALL + 20, sw, 14, t.sofa[0]);
+    px(g, sx + Math.floor(sw / 3), TOP_WALL + 20, 1, 14, t.sofa[2]);
+    px(g, sx + Math.floor(sw * 2 / 3), TOP_WALL + 20, 1, 14, t.sofa[2]);
+    dither(g, sx, TOP_WALL + 20, sw, 14, t.sofa[1], 0.15);
+    px(g, sx, TOP_WALL + 34, sw, 6, t.sofa[1]);
+    px(g, sx + 1, TOP_WALL + 41, sw, 3, t.shadow);
+    box(g, t, sx - 8, TOP_WALL + 6, 8, 28, 6, t.sofa[1], t.sofa[2], t.sofa[0]);
+    box(g, t, sx + sw, TOP_WALL + 6, 8, 28, 6, t.sofa[1], t.sofa[2], t.sofa[0]);
+    // 쿠션
+    px(g, sx + 8, TOP_WALL + 21, 14, 9, t.out); px(g, sx + 9, TOP_WALL + 22, 12, 7, t.rug[3]);
+    px(g, sx + sw - 22, TOP_WALL + 21, 14, 9, t.out); px(g, sx + sw - 21, TOP_WALL + 22, 12, 7, t.pillow[0]);
+    // 커피 테이블 + 머그·책
+    box(g, t, x0 + 52, 136, 56, 20, 6, t.bedWood[0], t.bedWood[1], t.bedWood[0]);
+    px(g, x0 + 60, 140, 12, 9, t.out); px(g, x0 + 61, 141, 10, 7, t.book[2]); px(g, x0 + 61, 141, 10, 1, t.paper);
+    px(g, x0 + 92, 141, 7, 7, t.out); px(g, x0 + 93, 142, 5, 5, t.mug); px(g, x0 + 94, 143, 3, 2, '#3a2a20');
+    // 화분 + 플로어 스탠드
+    plant(g, t, x0 + 140, TOP_WALL + 6);
+    plant(g, t, x0 + 2, 226);
+    px(g, x0 + 144, 225, 10, 10, t.out); px(g, x0 + 145, 226, 8, 8, t.lampShade); px(g, x0 + 145, 226, 8, 2, '#ffffff');
+    px(g, x0 + 148, 235, 2, 8, t.lampBase); px(g, x0 + 145, 243, 8, 2, t.lampBase);
   }
 
-  function drawWorkroom(g, p, theme) {
+  function drawWorkTop(g, t, theme) {
     const x0 = ROOM_X.work;
-    // 선반 + 책
-    px(g, x0 + 18, 54, 60, 4, p.shelf);
-    for (let i = 0; i < 9; i += 1) px(g, x0 + 22 + i * 6, 38 + (i % 3), 5, 16 - (i % 3), p.book[i % 4]);
+    tileFloor(g, t, x0, TOP_WALL, ROOM_W, LH - TOP_WALL);
+    backWall(g, t, 'work', x0);
+    // 책장 (뒷벽)
+    px(g, x0 + 11, 7, 62, 42, t.out);
+    px(g, x0 + 12, 8, 60, 40, t.bedWood[1]);
+    [10, 24, 38].forEach((sy) => {
+      px(g, x0 + 14, sy, 56, 12, t.bedWood[2]);
+      for (let i = 0; i < 9; i += 1) {
+        const h = 9 + Math.floor(hash(i, sy) * 3);
+        px(g, x0 + 15 + i * 6, sy + 12 - h, 5, h, t.book[(i + sy) % 5]);
+      }
+      px(g, x0 + 12, sy + 12, 60, 2, t.bedWood[0]);
+    });
     // A.I.Mon 포스터
-    px(g, x0 + 98, 26, 40, 30, p.frame);
-    px(g, x0 + 100, 28, 36, 26, theme === 'night' ? '#120f24' : '#2b2440');
-    px(g, x0 + 106, 34, 24, 3, HOLO);
-    px(g, x0 + 110, 40, 16, 2, '#ff7a59');
-    px(g, x0 + 112, 45, 12, 2, '#b15ce8');
-    // 긴 책상 + 모니터 4대
-    px(g, x0 + 8, 156, 144, 8, p.desk);
-    px(g, x0 + 8, 164, 144, 18, p.desk2);
-    px(g, x0 + 12, 182, 4, 14, p.desk2);
-    px(g, x0 + 144, 182, 4, 14, p.desk2);
+    px(g, x0 + 97, 11, 42, 32, t.out);
+    px(g, x0 + 98, 12, 40, 30, t.frame);
+    px(g, x0 + 100, 14, 36, 26, theme === 'night' ? '#120f24' : '#2b2440');
+    px(g, x0 + 106, 20, 24, 3, HOLO);
+    px(g, x0 + 110, 26, 16, 2, '#ff7a59');
+    px(g, x0 + 112, 31, 12, 2, '#b15ce8');
+    // 서버 랙 (왼쪽 위)
+    box(g, t, x0 + 6, TOP_WALL + 2, 22, 14, 34, t.metal[0], t.metal[1], t.metal[2]);
+    for (let y = TOP_WALL + 20; y < TOP_WALL + 48; y += 6) { px(g, x0 + 8, y, 18, 4, t.metal[2]); px(g, x0 + 10, y + 1, 2, 2, t.led); px(g, x0 + 14, y + 1, 2, 2, hash(y, 3) > 0.5 ? '#ff7a59' : t.led); }
+    plant(g, t, x0 + 138, TOP_WALL + 4);
+    // 긴 책상 + 모니터 4대 (모니터 화면 좌표는 drawMonitors 와 같음: y 131~148)
+    box(g, t, x0 + 8, 124, 144, 32, 10, t.deskTop[0], t.deskFront, t.deskTop[1]);
+    px(g, x0 + 12, 167, 3, 8, t.deskFront); px(g, x0 + 145, 167, 3, 8, t.deskFront);
     SPOTS.work.forEach((s) => {
       const mx = s.x - 13;
-      px(g, mx - 1, 129, 28, 21, p.monEdge);
-      px(g, mx + 1, 131, 24, 17, p.mon);
-      px(g, mx + 11, 150, 4, 6, p.monEdge);
-      px(g, mx + 7, 154, 12, 2, p.monEdge);
+      px(g, mx - 2, 128, 30, 23, t.out);
+      px(g, mx - 1, 129, 28, 21, t.monEdge);
+      px(g, mx + 1, 131, 24, 17, t.mon);
+      px(g, mx + 2, 132, 6, 1, 'rgba(255,255,255,.15)');
+      // 키보드 · 마우스
+      px(g, mx + 2, 151, 20, 4, t.out); px(g, mx + 3, 152, 18, 2, t.metal[2]);
+      px(g, mx + 24, 151, 3, 4, t.metal[2]);
     });
+    // 바닥 케이블 + 의자 자국 없는 작업 매트
+    px(g, x0 + 20, 178, 120, 1, t.metal[1]);
+    rug(g, t, x0 + 20, 196, 120, 40);
+    // 종이 더미
+    px(g, x0 + 124, 238, 14, 10, t.out); px(g, x0 + 125, 239, 12, 8, t.paper); px(g, x0 + 127, 241, 8, 1, t.metal[0]);
+  }
+
+  // 방 사이 벽(위에서 본 벽 윗면) + 문, 바깥 벽
+  function wallsTop(g, t) {
+    const cap = (x, y, w, h) => { px(g, x, y, w, h, t.out); px(g, x + 1, y, w - 2, h, t.cap); px(g, x + 1, y, 1, h, t.capHi); };
+    [ROOM_W, ROOM_W * 2].forEach((x) => {
+      cap(x - 4, 0, 8, DOOR.y0);
+      cap(x - 4, DOOR.y1, 8, LH - DOOR.y1);
+      // 문턱
+      px(g, x - 4, DOOR.y0, 8, DOOR.y1 - DOOR.y0, t.wood[3]);
+      px(g, x - 4, DOOR.y0 + 2, 8, 1, t.out); px(g, x - 4, DOOR.y1 - 3, 8, 1, t.out);
+    });
+    cap(0, 0, 4, LH);
+    cap(LW - 4, 0, 4, LH);
+    px(g, 0, LH - 6, LW, 6, t.out);
+    px(g, 0, LH - 5, LW, 5, t.cap);
+    px(g, 0, LH - 5, LW, 1, t.capHi);
   }
 
   function buildRoom(theme) {
@@ -276,27 +454,11 @@
     c.width = LW;
     c.height = LH;
     const g = c.getContext('2d');
-    const p = PAL[theme];
-    for (const room of ROOMS) {
-      const x0 = ROOM_X[room];
-      px(g, x0, 0, ROOM_W, WALL_H, p[room].wall);
-      for (let y = 8; y < WALL_H; y += 16) px(g, x0, y, ROOM_W, 1, p[room].wall2);
-    }
-    // 바닥 판자
-    px(g, 0, WALL_H, LW, LH - WALL_H, p.floor);
-    for (let y = WALL_H + 10; y < LH; y += 12) px(g, 0, y, LW, 1, p.floor2);
-    for (let y = WALL_H, row = 0; y < LH; y += 12, row += 1) {
-      for (let x = (row % 2) * 24; x < LW; x += 48) px(g, x, y, 1, 12, p.floor2);
-    }
-    px(g, 0, WALL_H - 4, LW, 4, p.base);
-    // 방 사이 기둥 (문틀)
-    [ROOM_W, ROOM_W * 2].forEach((x) => {
-      px(g, x - 3, 0, 6, WALL_H, p.pillar);
-      px(g, x - 1, 0, 2, WALL_H, p.pillar2);
-    });
-    drawBedroom(g, p, theme);
-    drawLiving(g, p, theme);
-    drawWorkroom(g, p, theme);
+    const t = TV[theme];
+    drawBedroomTop(g, t, theme);
+    drawLivingTop(g, t, theme);
+    drawWorkTop(g, t, theme);
+    wallsTop(g, t);
     return c;
   }
 
